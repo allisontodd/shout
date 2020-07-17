@@ -1,0 +1,25 @@
+//
+// Protocol Buffers definition for messages between the Mercury Adapter and
+// Client Endpoint services.
+//
+syntax = "proto3";
+
+package measurements;
+
+message SessionMsg {
+  int32 sid  = 1; // Session ID (assigned by controller)
+  int32 uuid = 2; // Unique ID for this message
+  enum MsgType {
+    INIT   = 0; // Session initialization messages
+    CLOSE  = 1; // Session close/end messages
+    CALL   = 2; // RPC call message
+    RESULT = 3; // RPC result message
+    HB     = 4; // Heartbeat message
+  }
+  MsgType type = 3; // One of the above types
+  message KeyVal {
+    string key = 1;
+    string val = 2;
+  }
+  repeated KeyVal attributes = 4; // KV attributes for this session message
+}
