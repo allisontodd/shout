@@ -21,7 +21,7 @@ class Client:
         self.conn = conn
         self.last = time.time()
 
-class ControllerNetworker:
+class ServerConnector:
     LISTEN_IP = '127.0.0.1'
     LISTEN_PORT = 5555
     BACKLOG = 10

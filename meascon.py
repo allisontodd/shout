@@ -5,7 +5,7 @@ import time
 import multiprocessing as mp
 
 import measurements_pb2 as measpb
-import controller
+from serverconnector import ServerConnector
 
 LOGFILE="/var/tmp/mcontroller.log"
 
@@ -16,7 +16,7 @@ class MeasurementsController:
         self.pipe = None
         self.conproc = None
         self.setup_logger()
-        self.networker = controller.ControllerNetworker()
+        self.connector = ServerConnector()
 
     def setup_logger(self):
         fmat = logging.Formatter(fmt='%(asctime)s:%(levelname)s: %(message)s',
@@ -33,7 +33,7 @@ class MeasurementsController:
     def run(self):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
-        self.netproc = mp.Process(target=self.networker.run,
+        self.netproc = mp.Process(target=self.connector.run,
                                   args=(c2, self.logger))
         self.netproc.start()
         time.sleep(5) # TEMP
@@ -41,7 +41,7 @@ class MeasurementsController:
         msg.type = measpb.SessionMsg.CALL
         attr = msg.attributes.add()
         attr.key = "funcname"
-        attr.val = controller.ControllerNetworker.CALL_GETCLIENTS
+        attr.val = ServerConnector.CALL_GETCLIENTS
         self.pipe.send(msg.SerializeToString())
         rmsg = measpb.SessionMsg()
         rmsg.ParseFromString(self.pipe.recv())

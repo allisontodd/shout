@@ -5,29 +5,23 @@ import struct
 import socket
 import logging
 import selectors
+import random
+import multiprocessing as mp
 
 import measurements_pb2 as measpb
 
 DEF_IP = "127.0.0.1"
 DEF_PORT = 5555
 
-def get_msg_from_sock(conn):
-    smsg = None
-    ldata = conn.recv(4)
-    if ldata:
-        mlen = struct.unpack(">L", ldata)[0]
-        mbuf = conn.recv(mlen)
-        smsg = measpb.SessionMsg()
-        smsg.ParseFromString(mbuf)
-    return smsg
 
-class Client:
+class ClientConnector:
     MAX_CONN_TRIES = 10
     
-    def __init__(self, srvip, srvport, logger):
+    def __init__(self, srvip, srvport):
         self.logger = logger
         self.srvip = srvip
         self.srvport = srvport
+        self.pipe = None
         self.sock = None
         self.sid = 0
         self.sel = selectors.DefaultSelector()
@@ -37,17 +31,28 @@ class Client:
             msg = measpb.SessionMsg()
             msg.type = measpb.SessionMsg.CLOSE
             try:
-                self.send_msg(msg)
+                self._send_msg(self.sock, msg)
                 self.sock.close()
             except:
                 pass
 
-    def send_msg(self, msg):
+    def _get_msg_from_sock(self, conn):
+        smsg = None
+        ldata = conn.recv(4)
+        if ldata:
+            mlen = struct.unpack(">L", ldata)[0]
+            mbuf = conn.recv(mlen)
+            smsg = measpb.SessionMsg()
+            smsg.ParseFromString(mbuf)
+        return smsg
+
+    def _send_msg(self, conn, msg):
         smsg = msg.SerializeToString()
-        packed_len = struct.pack(">L", len(smsg))
-        self.logger.debug("Sending type %d message." % msg.type)
-        self.sock.sendall(packed_len + smsg)
-        self.logger.debug("Message type %d sent." % msg.type)
+        if isinstance(conn, mp.connection.Connection):
+            conn.send(smsg)
+        else:
+            packed_len = struct.pack(">L", len(smsg))
+            conn.sendall(packed_len + smsg)
 
     def _connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,31 +66,39 @@ class Client:
                 self.logger.warning("Failed to connect to %s:%s: %s" %
                                     (self.srvip, self.srvport, e))
                 tries += 1
-                if tries > Client.MAX_CONN_TRIES:
+                if tries > self.MAX_CONN_TRIES:
                     self.logger.error("Too many connection attempts! Exiting.")
                     raise Exception("Too many connection attempts! Exiting.")
                 time.sleep(1)
 
     def _readsock(self, conn, mask):
-        msg = get_msg_from_sock(conn)
+        msg = self._get_msg_from_sock(conn)
         if msg:
-            Client.DISPATCH[msg.type](self, msg, conn)
+            self.DISPATCH[msg.type](self, msg, conn)
         else:
             self.logger.warning("Connection to %s:%s closed unexpectedly." %
                                 conn.getpeername())
             self.sel.unregister(conn)
             self.do_init()
-                
+
+    def _readpipe(self, pipe, mask):
+            msg = measpb.SessionMsg()
+            msg.ParseFromString(pipe.recv())
+            self.DISPATCH[msg.type](self, msg, pipe)
+            
     def do_init(self):
         self._connect()
         msg = measpb.SessionMsg()
         msg.type = measpb.SessionMsg.INIT
-        self.send_msg(msg)
-        rmsg = get_msg_from_sock(self.sock)
+        self._send_msg(self.sock, msg)
+        rmsg = self._get_msg_from_sock(self.sock)
         self.sid = rmsg.sid
         self.logger.info("Connected with session id: %d" % self.sid)
 
-    def run(self):
+    def run(self, pipe, logger):
+        self.pipe = pipe
+        self.sel.register(self.pipe, selectors.EVENT_READ, self._readpipe)
+        self.logger = logger
         self.do_init()
 
         while True:
@@ -99,8 +112,11 @@ if __name__ == "__main__":
                              datefmt='%Y-%m-%d %H:%M:%S')
     shandler = logging.StreamHandler()
     shandler.setFormatter(fmat)
-    logger = logging.getLogger("MeasClient")
+    logger = mp.get_logger()
     logger.setLevel(logging.DEBUG)
     logger.addHandler(shandler)
-    cli = Client(DEF_IP, DEF_PORT, logger)
-    cli.run()
+    cli = ClientConnector(DEF_IP, DEF_PORT)
+    (c1, c2) = mp.Pipe()
+    proc = mp.Process(target=cli.run, args=(c2, logger))
+    proc.start()
+    proc.join()
