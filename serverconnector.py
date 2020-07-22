@@ -31,6 +31,7 @@ class ServerConnector:
     def __init__(self):
         self.clients = {}
         self.pipe = None
+        self.logger = None
         self.sel = selectors.DefaultSelector()
 
     def _setuplistener(self):
@@ -86,9 +87,16 @@ class ServerConnector:
         for cli in self.clients.values():
             if cli.sid == sid: return cli
         return None
-            
+
+    def _get_attr(self, msg, key):
+        for kv in msg.attributes:
+            if kv.key == key: return kv.val
+        return None
+    
     def handle_init(self, msg, conn):
-        sid = random.getrandbits(31)
+        sid = msg.sid
+        if not sid:
+            sid = random.getrandbits(31)
         peerinfo = conn.getpeername()
         self.logger.info("INIT message from %s:%s" % peerinfo)
         self.clients[repr(peerinfo)] = Client(*peerinfo, sid, conn)
@@ -96,24 +104,26 @@ class ServerConnector:
         self._send_msg(conn, msg)
         
     def handle_call(self, msg, conn):
-        for kv in msg.attributes:
-            # Handle calls meant for the networker (this class).
-            if kv.key == "funcname" and kv.val in self.CALLS:
-                self._send_msg(conn, self.CALLS[kv.val](self, msg))
+        func = self._get_attr(msg, "funcname")
+        clientid = self._get_attr(msg, "clientid")
+        if func in self.CALLS:
+            # Handle calls meant for the connector (this class).
+            self._send_msg(conn, self.CALLS[func](self, msg))
+        elif clientid:
             # Send along calls destined for measurement clients.
-            elif kv.key == "clientname":
-                if kv.val == "all":
-                    for cli in self.clients.values():
-                        self._send_msg(cli.conn, msg)
-                else:
-                    cli = self._get_client_with_sid(kv.val)
+            if clientid == "all":
+                self.logger.debug("Sending '%s' call to all clients" % func)
+                for cli in self.clients.values():
                     self._send_msg(cli.conn, msg)
             else:
-                # Error condition...
-                pass
+                self.logger.debug("Sending '%s' call to client %s" % (func, clientid))
+                cli = self._get_client_with_sid(int(clientid))
+                self._send_msg(cli.conn, msg)
 
     def handle_result(self, msg, conn):
         # Just pass up to measurements controller for now.
+        cli = self.clients[repr(conn.getpeername())]
+        self.logger.debug("Passing along result from client %s" % cli.sid)
         self._send_msg(self.pipe, msg)
 
     def handle_hb(self, msg, conn):
@@ -134,7 +144,7 @@ class ServerConnector:
         for cli in self.clients.values():
             attr = rmsg.attributes.add()
             attr.key = "client"
-            attr.val = ":".join((str(cli.sid), str(cli.last)))
+            attr.val = str(cli.sid)
         return rmsg
             
     def run(self, pipe, logger):

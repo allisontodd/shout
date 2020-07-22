@@ -18,9 +18,9 @@ class ClientConnector:
     MAX_CONN_TRIES = 10
     
     def __init__(self, srvip, srvport):
-        self.logger = logger
         self.srvip = srvip
         self.srvport = srvport
+        self.logger = None
         self.pipe = None
         self.sock = None
         self.sid = 0
@@ -79,27 +79,59 @@ class ClientConnector:
             self.logger.warning("Connection to %s:%s closed unexpectedly." %
                                 conn.getpeername())
             self.sel.unregister(conn)
-            self.do_init()
+            self.send_init()
 
     def _readpipe(self, pipe, mask):
             msg = measpb.SessionMsg()
             msg.ParseFromString(pipe.recv())
             self.DISPATCH[msg.type](self, msg, pipe)
-            
-    def do_init(self):
+
+    def _get_attr(self, msg, key):
+        for kv in msg.attributes:
+            if kv.key == key: return kv.val
+        return None
+
+    def _add_attr(self, msg, key, val):
+        attr = msg.attributes.add()
+        attr.key = key
+        attr.val = val
+
+    def handle_init(self, msg, conn):
+        self.sid = msg.sid
+        self.logger.info("Connected with session id: %d" % self.sid)
+
+    def handle_call(self, msg, conn):
+        func = self._get_attr(msg, "funcname")
+        if func in self.CALLS:
+            # Handle calls meant for the connector (this class).
+            self._send_msg(conn, self.CALLS[func](self, msg))
+        else:
+            # Send along calls destined for the client measurement code
+            self._send_msg(self.pipe, msg)
+
+    def handle_result(self, msg, conn):
+        # Pass result back to server.
+        self._add_attr(msg, "clientid", str(self.sid))
+        self._send_msg(self.sock, msg)
+
+    def handle_hb(self, msg, conn):
+        pass
+
+    def handle_close(self, msg, conn):
+        pass
+    
+    def send_init(self):
         self._connect()
         msg = measpb.SessionMsg()
         msg.type = measpb.SessionMsg.INIT
+        msg.sid = self.sid
         self._send_msg(self.sock, msg)
-        rmsg = self._get_msg_from_sock(self.sock)
-        self.sid = rmsg.sid
-        self.logger.info("Connected with session id: %d" % self.sid)
 
     def run(self, pipe, logger):
         self.pipe = pipe
         self.sel.register(self.pipe, selectors.EVENT_READ, self._readpipe)
         self.logger = logger
-        self.do_init()
+        self.send_init()
 
         while True:
             events = self.sel.select()
@@ -107,16 +139,12 @@ class ClientConnector:
                 callback = key.data
                 callback(key.fileobj, mask)
 
-if __name__ == "__main__":
-    fmat = logging.Formatter(fmt='%(asctime)s:%(name)s:%(levelname)s: %(message)s',
-                             datefmt='%Y-%m-%d %H:%M:%S')
-    shandler = logging.StreamHandler()
-    shandler.setFormatter(fmat)
-    logger = mp.get_logger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(shandler)
-    cli = ClientConnector(DEF_IP, DEF_PORT)
-    (c1, c2) = mp.Pipe()
-    proc = mp.Process(target=cli.run, args=(c2, logger))
-    proc.start()
-    proc.join()
+    CALLS = {}
+                
+    DISPATCH = {
+        measpb.SessionMsg.INIT: handle_init,
+        measpb.SessionMsg.CALL: handle_call,
+        measpb.SessionMsg.RESULT: handle_result,
+        measpb.SessionMsg.HB: handle_hb,
+        measpb.SessionMsg.CLOSE: handle_close,
+    }
