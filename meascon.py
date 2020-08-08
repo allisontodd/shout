@@ -3,6 +3,7 @@
 import logging
 import time
 import multiprocessing as mp
+import numpy as np
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
@@ -54,15 +55,16 @@ class MeasurementsController:
         rmsg = measpb.SessionMsg()
         rmsg.ParseFromString(self.pipe.recv())
 
-        # Call "echo" on list of clients
-        for cli in rmsg.attributes:
-            self.logger.info("Sending to client %s" % cli.val)
-            msg = measpb.SessionMsg()
-            msg.type = measpb.SessionMsg.CALL
-            self._add_attr(msg, "funcname", "echo")
-            self._add_attr(msg, "type", "request")
-            self._add_attr(msg, "clientid", cli.val)
-            self.pipe.send(msg.SerializeToString())
+        # Call "recv" on all clients
+        self.logger.info("Sending sample receive request to all clients")
+        msg = measpb.SessionMsg()
+        msg.type = measpb.SessionMsg.CALL
+        self._add_attr(msg, "funcname", "recv_samples")
+        self._add_attr(msg, "nsamples", "50")
+        self._add_attr(msg, "tune_freq", "1e9")
+        self._add_attr(msg, "gain", "70")
+        self._add_attr(msg, "sample_rate", "1e6")
+        self.pipe.send(msg.SerializeToString())
 
         # Get results
         rmsg = measpb.SessionMsg()

@@ -5,13 +5,19 @@
 
 import logging
 import multiprocessing as mp
+import numpy as np
 
 import measurements_pb2 as measpb
 from clientconnector import ClientConnector
+from radio import Radio
 
 LOGFILE="/var/tmp/ccontroller.log"
 DEF_IP = "127.0.0.1"
 DEF_PORT = 5555
+
+def mk_sine(nsamps, wampl, wfreq, srate):
+    vals = np.ones((1,nsamps), dtype=np.complex64) * np.arange(nsamps)
+    return wampl * np.exp(vals * 2j * np.pi * wfreq/srate)
 
 class MeasurementsClient:
     def __init__(self, servip, servport):
@@ -19,6 +25,7 @@ class MeasurementsClient:
         self.conproc = None
         self.logger = None
         self.setup_logger()
+        self.radio = Radio()
         self.connector = ClientConnector(servip, servport)
 
     def setup_logger(self):
@@ -32,7 +39,7 @@ class MeasurementsClient:
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
-
+        
     def _add_attr(self, msg, key, val):
         attr = msg.attributes.add()
         attr.key = key
@@ -51,6 +58,25 @@ class MeasurementsClient:
         self._add_attr(rmsg, "type", "reply")
         self.pipe.send(rmsg.SerializeToString())
 
+    def recv_samps(self, msg):
+        rmsg = measpb.SessionMsg()
+        rmsg.type = measpb.SessionMsg.RESULT
+        nsamps = int(self._get_attr(msg, "nsamples"))
+        tfreq  = float(self._get_attr(msg, "tune_freq"))
+        gain   = int(self._get_attr(msg, "gain"))
+        srate  = float(self._get_attr(msg, "sample_rate"))
+        self.logger.info("Collecting %d samples." % nsamps)
+        self.radio.tune(tfreq, gain, srate)
+        samps = self.radio.recv_samples(nsamps)
+        i = 0
+        for samp in samples[0]:
+            self._add_attr(rmsg, "s%d" % i, str(samp))
+            i += 1
+        self.pipe.send(rmsg.SerializeToString())
+
+    def find_peaks(self, msg):
+        pass
+        
     def run(self):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -68,6 +94,8 @@ class MeasurementsClient:
 
     CALLS = {
         "echo": echo_reply,
+        "recv_samples": recv_samps,
+        "get_peaks": get_peaks,
     }
                     
 if __name__ == "__main__":
