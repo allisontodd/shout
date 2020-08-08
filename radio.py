@@ -1,4 +1,4 @@
-#!/usr/bin/env python 3
+#!/usr/bin/env python3
 #
 # SDR interaction class
 #
@@ -26,18 +26,20 @@ class Radio:
             
         if self.txstreamer:
             # Send a mini EOB packet
-            metadata = uhd.types.RXMetadata()
+            metadata = uhd.types.TXMetadata()
             metadata.end_of_burst = True
-            tx_streamer.send(np.zeros((1, 0), dtype=np.complex64), metadata)
+            self.txstreamer.send(np.zeros((1, 0), dtype=np.complex64), metadata)
             self.txstreamer = None
             
-    def tune(freq, gain, rate = None):
+    def tune(self, freq, gain, rate = None):
         # Kill any existing streamers
         self._kill_streamers()
         
         # Set the USRP freq, gain, and rate (if provided)
         self.usrp.set_rx_freq(uhd.types.TuneRequest(freq), self.channel)
         self.usrp.set_rx_gain(gain, self.channel)
+        self.usrp.set_tx_freq(uhd.types.TuneRequest(freq), self.channel)
+        self.usrp.set_tx_gain(gain, self.channel)
         if rate:
             self.usrp.set_tx_rate(rate, self.channel)
             self.usrp.set_rx_rate(rate, self.channel)
@@ -63,7 +65,7 @@ class Radio:
             if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
                 print(metadata.strerror())
         
-    def recv_samples(nsamps, rate = None):
+    def recv_samples(self, nsamps, rate = None):
         # Set the sampling rate if necessary
         if rate:
             self.usrp.set_rx_rate(rate, self.channel)
@@ -95,7 +97,7 @@ class Radio:
         # Done.  Return samples.
         return samples
 
-    def send_samples(samples, rate = None):
+    def send_samples(self, samples, rate = None):
         # Set the sampling rate if necessary
         if rate:
             self.usrp.set_tx_rate(rate, self.channel)
@@ -104,15 +106,18 @@ class Radio:
         metadata = uhd.types.TXMetadata()
 
         # Figure out the size of the receive buffer and make it
-        buffer_samps = self.txstreamer.get_max_num_samps()
-        tx_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
         max_tx_samps = self.txstreamer.get_max_num_samps()
         tot_samps = samples.size
 
+        tx_buffer = np.zeros((1, max_tx_samps), dtype=np.complex64)
+        
         tx_samps = 0
         while tx_samps < tot_samps:
             nsamps = min(tot_samps - tx_samps, max_tx_samps)
-            tx_samps += self.txstreamer.send(samples[:, tx_samps:tx_samps + nsamps], metadata)
+            tx_buffer[:, 0:0 + nsamps] = samples[:, tx_samps:tx_samps + nsamps]
+            if nsamps < max_tx_samps:
+                tx_buffer[:, nsamps:] = 0. + 0.j
+            tx_samps += self.txstreamer.send(tx_buffer, metadata)
 
-            if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
-                print(metadata.strerror())
+            #if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
+            #    print(metadata.strerror())
