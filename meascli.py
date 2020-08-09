@@ -39,7 +39,7 @@ class MeasurementsClient:
         self.logger.setLevel(logging.INFO)
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
-        
+
     def _add_attr(self, msg, key, val):
         attr = msg.attributes.add()
         attr.key = key
@@ -49,7 +49,7 @@ class MeasurementsClient:
         for kv in msg.attributes:
             if kv.key == key: return kv.val
         return None
-        
+
     def echo_reply(self, msg):
         self.logger.info("Received Echo Request. Sending response.")
         rmsg = measpb.SessionMsg()
@@ -67,7 +67,7 @@ class MeasurementsClient:
         srate  = float(self._get_attr(msg, "sample_rate"))
         self.logger.info("Collecting %d samples." % nsamps)
         self.radio.tune(tfreq, gain, srate)
-        samps = self.radio.recv_samples(nsamps)
+        samples = self.radio.recv_samples(nsamps)
         i = 0
         for samp in samples[0]:
             self._add_attr(rmsg, "s%d" % i, str(samp))
@@ -76,7 +76,7 @@ class MeasurementsClient:
 
     def find_peaks(self, msg):
         pass
-        
+
     def run(self):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -95,9 +95,9 @@ class MeasurementsClient:
     CALLS = {
         "echo": echo_reply,
         "recv_samples": recv_samps,
-        "get_peaks": get_peaks,
+        "find_peaks": find_peaks,
     }
-                    
+
 if __name__ == "__main__":
     meascli = MeasurementsClient(DEF_IP, DEF_PORT)
     meascli.run()

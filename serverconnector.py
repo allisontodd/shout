@@ -27,7 +27,7 @@ class ServerConnector:
     BACKLOG = 10
 
     CALL_GETCLIENTS = "getclients"
-    
+
     def __init__(self):
         self.clients = {}
         self.pipe = None
@@ -40,7 +40,7 @@ class ServerConnector:
         lsock.listen(self.BACKLOG)
         lsock.setblocking(False)
         self.sel.register(lsock, selectors.EVENT_READ, self._accept)
-        
+
     def _accept(self, sock, mask):
         (conn, addr) = sock.accept()
         self.logger.info("Accepted connection: %s:%s" % conn.getpeername())
@@ -92,7 +92,7 @@ class ServerConnector:
         for kv in msg.attributes:
             if kv.key == key: return kv.val
         return None
-    
+
     def handle_init(self, msg, conn):
         sid = msg.sid
         if not sid:
@@ -102,7 +102,7 @@ class ServerConnector:
         self.clients[repr(peerinfo)] = Client(*peerinfo, sid, conn)
         msg.sid = sid
         self._send_msg(conn, msg)
-        
+
     def handle_call(self, msg, conn):
         func = self._get_attr(msg, "funcname")
         clientid = self._get_attr(msg, "clientid")
@@ -136,7 +136,7 @@ class ServerConnector:
         conn.close()
         if repr(peerinfo) in self.clients:
             del(self.clients[repr(peerinfo)])
-        
+
     def get_clients(self, msg):
         rmsg = measpb.SessionMsg()
         #rmsg.uuid = msg.uuid
@@ -146,13 +146,13 @@ class ServerConnector:
             attr.key = "client"
             attr.val = str(cli.sid)
         return rmsg
-            
+
     def run(self, pipe, logger):
         self.pipe = pipe
         self.sel.register(self.pipe, selectors.EVENT_READ, self._readpipe)
         self.logger = logger
         self._setuplistener()
-        
+
         while True:
             events = self.sel.select()
             for key, mask in events:
