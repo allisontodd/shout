@@ -45,7 +45,7 @@ class MeasurementsController:
         self.netproc = mp.Process(target=self.connector.run,
                                   args=(c2, self.logger))
         self.netproc.start()
-        time.sleep(15) # TEMP
+        time.sleep(10) # TEMP
 
         # Get list of clients
         cmsg = measpb.SessionMsg()

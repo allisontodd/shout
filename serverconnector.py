@@ -22,7 +22,7 @@ class Client:
         self.last = time.time()
 
 class ServerConnector:
-    LISTEN_IP = '127.0.0.1'
+    LISTEN_IP = '0.0.0.0'
     LISTEN_PORT = 5555
     BACKLOG = 10
 
@@ -36,6 +36,7 @@ class ServerConnector:
 
     def _setuplistener(self):
         lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         lsock.bind((self.LISTEN_IP, self.LISTEN_PORT))
         lsock.listen(self.BACKLOG)
         lsock.setblocking(False)
