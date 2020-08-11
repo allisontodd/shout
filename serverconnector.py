@@ -9,6 +9,7 @@ import socket
 import selectors
 import struct
 import random
+import select
 import multiprocessing as mp
 
 import measurements_pb2 as measpb
@@ -71,7 +72,13 @@ class ServerConnector:
         ldata = conn.recv(4)
         if ldata:
             mlen = struct.unpack(">L", ldata)[0]
-            mbuf = conn.recv(mlen)
+            mbuf = bytearray()
+            while len(mbuf) < mlen:
+                rd, wt, xt = select.select([conn], [], [], 1)
+                if not rd:
+                    self.logger.warning("No data ready for read from socket.")
+                mbuf += conn.recv(mlen - len(mbuf))
+            self.logger.info("Received %d, indicated size %d." % (len(mbuf), mlen))
             smsg = measpb.SessionMsg()
             smsg.ParseFromString(mbuf)
         return smsg
