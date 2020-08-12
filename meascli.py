@@ -4,6 +4,7 @@
 #
 
 import logging
+import time
 import multiprocessing as mp
 import numpy as np
 
@@ -84,11 +85,12 @@ class MeasurementsClient:
         gain   = int(self._get_attr(msg, "gain"))
         srate  = float(self._get_attr(msg, "sample_rate"))
         end    = time.time() + int(self._get_attr(msg, "duration"))
-        wfreq  = float(self._get_attr(msg, "wave_frequency"))
-        wampl  = float(self._get_attr(msg, "wave_amplitude"))
-        nsamps = np.floor(wfreq/srate)
+        wfreq  = float(self._get_attr(msg, "wave_freq"))
+        wampl  = float(self._get_attr(msg, "wave_ampl"))
+        nsamps = np.floor(srate/wfreq)
         nsamps *= np.ceil(self.XMIT_SAMPS_MIN/nsamps)
-        sinebuf = mk_sine(nsamps, wfreq, wampl, srate)
+        sinebuf = mk_sine(int(nsamps), wampl, wfreq, srate)
+        self.logger.info("Sending sine wave with freq %f" % wfreq)
         self.radio.tune(tfreq, gain, srate)
         while time.time() < end:
             for i in range(self.SEND_SAMPS_COUNT):
