@@ -20,6 +20,9 @@ def mk_sine(nsamps, wampl, wfreq, srate):
     return wampl * np.exp(vals * 2j * np.pi * wfreq/srate)
 
 class MeasurementsClient:
+    XMIT_SAMPS_MIN = 100000
+    SEND_SAMPS_COUNT = 10
+    
     def __init__(self, servip, servport):
         self.pipe = None
         self.conproc = None
@@ -74,9 +77,25 @@ class MeasurementsClient:
             i += 1
         self.pipe.send(rmsg.SerializeToString())
 
-    def find_peaks(self, msg):
-        pass
-
+    def send_sine(self, msg):
+        rmsg = measpb.SessionMsg()
+        rmsg.type = measpb.SessionMsg.RESULT
+        tfreq  = float(self._get_attr(msg, "tune_freq"))
+        gain   = int(self._get_attr(msg, "gain"))
+        srate  = float(self._get_attr(msg, "sample_rate"))
+        end    = time.time() + int(self._get_attr(msg, "duration"))
+        wfreq  = float(self._get_attr(msg, "wave_frequency"))
+        wampl  = float(self._get_attr(msg, "wave_amplitude"))
+        nsamps = np.floor(wfreq/srate)
+        nsamps *= np.ceil(self.XMIT_SAMPS_MIN/nsamps)
+        sinebuf = mk_sine(nsamps, wfreq, wampl, srate)
+        self.radio.tune(tfreq, gain, srate)
+        while time.time() < end:
+            for i in range(self.SEND_SAMPS_COUNT):
+                self.radio.send_samples(sinebuf)
+        self._add_attr(rmsg, "result", "done")
+        self.pipe.send(rmsg.SerializeToString())
+        
     def run(self):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -95,7 +114,7 @@ class MeasurementsClient:
     CALLS = {
         "echo": echo_reply,
         "recv_samples": recv_samps,
-        "find_peaks": find_peaks,
+        "xmit_sine": xmit_sine,
     }
 
 if __name__ == "__main__":
