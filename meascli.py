@@ -77,7 +77,7 @@ class MeasurementsClient:
             i += 1
         self.pipe.send(rmsg.SerializeToString())
 
-    def send_sine(self, msg):
+    def xmit_sine(self, msg):
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
         tfreq  = float(self._get_attr(msg, "tune_freq"))
