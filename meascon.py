@@ -4,6 +4,7 @@ import logging
 import time
 import multiprocessing as mp
 import numpy as np
+import matplotlib.pyplot as plt
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
@@ -12,6 +13,19 @@ LOGFILE="/var/tmp/mcontroller.log"
 
 WAITTIME = 10
 MAXWCOUNT = 6
+
+def compute_psd(nfft, samples):
+    """Return the power spectral density of `samples`"""
+    window = np.hamming(nfft)
+    result = np.multiply(window, samples)
+    result = np.fft.fftshift(np.fft.fft(result, nfft))
+    result = np.square(np.abs(result))
+    result = np.nan_to_num(10.0 * np.log10(result))
+    return result
+
+def plot_stuff(*args):
+    plt.plot(*args)
+    plt.show()
 
 class MeasurementsController:
 
@@ -55,7 +69,7 @@ class MeasurementsController:
         clients = []
         for kv in rmsg.attributes:
             if kv.key == "client":
-                clients.append(kv.key)
+                clients.append(kv.val)
         return clients
 
     def get_samples(self, nsamps, tfreq, gain, srate, clients = ["all"]):
@@ -90,7 +104,7 @@ class MeasurementsController:
             tmsg.CopyFrom(msg)
             self._add_attr(msg, "clientid", client)
             self.pipe.send(msg.SerializeToString())
-
+            
     def run(self):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -100,10 +114,18 @@ class MeasurementsController:
         time.sleep(10) # TEMP
         
         # DO STUFF HERE.
+        tfreq = 2e9
+        srate = 1e6
+        txgain = 60
+        rxgain = 38
+        wampl = 0.9
+        wfreq = 2e5
+        dur = 20
+        nsamps = 256
         clients = self.get_clients()
-        self.xmit_sine(20, 2e9, 60, 1e6, 2e5, 0.9, [clients[0]])
+        self.xmit_sine(dur, tfreq, txgain, srate, wfreq, wampl, [clients[0]])
         time.sleep(5)
-        self.get_samples(256, 2e9, 38, 1e6, [clients[1]])
+        self.get_samples(nsamps, tfreq, rxgain, srate, [clients[1]])
 
         # Get results
         rmsg = measpb.SessionMsg()
@@ -112,7 +134,19 @@ class MeasurementsController:
         while wcount < MAXWCOUNT:
             if self.pipe.poll(WAITTIME):
                 rmsg.ParseFromString(self.pipe.recv())
-                print("=== Call response:\n%s" % rmsg)
+                clientid = self._get_attr(rmsg, "clientid")
+                if clientid == clients[1]:
+                    vals = np.zeros(nsamps, dtype=np.complex64)
+                    for kv in rmsg.attributes:
+                        if kv.key.startswith("s"):
+                            idx = int(kv.key[1:])
+                            vals[idx] = complex(kv.val)
+                    psd = compute_psd(len(vals), vals)
+                    freqs = np.fft.fftshift(np.fft.fftfreq(len(vals), 1/srate))
+                    plproc = mp.Process(target=plot_stuff, args=(freqs, psd))
+                    plproc.start()
+                else:
+                    print("=== Call response:\n%s" % rmsg)
             else:
                 wcount += 1
         self.logger.info("Done with calls...")
