@@ -8,6 +8,7 @@ import time
 import multiprocessing as mp
 import numpy as np
 import daemon
+import argparse
 
 import measurements_pb2 as measpb
 from clientconnector import ClientConnector
@@ -124,14 +125,14 @@ def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--args", help="USRP radio arguments", default="", type=str)
-    parser.add_argument("-h", "--host", help="Orchestrator host to connect to", default=DEF_IP, type=str)
+    parser.add_argument("-s", "--host", help="Orchestrator host to connect to", default=DEF_IP, type=str)
     parser.add_argument("-p", "--port", help="Orchestrator port", default=DEF_PORT, type=int)
     parser.add_argument("-f", "--foreground", help="Run in foreground (don't daemonize)", action="store_true")
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    if !args.foreground:
+    if not args.foreground:
         # Daemonize
         dcxt = daemon.DaemonContext(umask=0o022)
         dcxt.open()
