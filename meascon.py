@@ -53,7 +53,7 @@ class MeasurementsController:
         for kv in msg.attributes:
             if kv.key == key: return kv.val
         return None
-        
+
     def _add_attr(self, msg, key, val):
         attr = msg.attributes.add()
         attr.key = key
@@ -86,8 +86,8 @@ class MeasurementsController:
         for client in clients:
             tmsg = measpb.SessionMsg()
             tmsg.CopyFrom(msg)
-            self._add_attr(msg, "clientid", client)
-            self.pipe.send(msg.SerializeToString())
+            self._add_attr(tmsg, "clientid", client)
+            self.pipe.send(tmsg.SerializeToString())
 
     def xmit_sine(self, duration, tfreq, gain, srate, wfreq, wampl, clients = ["all"]):
         self.logger.info("Transmitting sine wave on client(s)")
@@ -105,7 +105,7 @@ class MeasurementsController:
             tmsg.CopyFrom(msg)
             self._add_attr(msg, "clientid", client)
             self.pipe.send(msg.SerializeToString())
-            
+
     def run(self, args):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -113,7 +113,7 @@ class MeasurementsController:
                                   args=(c2, self.logger))
         self.netproc.start()
         time.sleep(10) # TEMP
-        
+
         # DO STUFF HERE.
         clients = self.get_clients()
         self.xmit_sine(args.txduration, args.freq, args.txgain, args.rate,
@@ -130,7 +130,7 @@ class MeasurementsController:
             if self.pipe.poll(WAITTIME):
                 rmsg.ParseFromString(self.pipe.recv())
                 clientid = self._get_attr(rmsg, "clientid")
-                if clientid == clients[1]:
+                if clientid != clients[0]:
                     vals = np.zeros(args.nsamps, dtype=np.complex64)
                     for kv in rmsg.attributes:
                         if kv.key.startswith("s"):
@@ -154,13 +154,13 @@ def parse_args():
     parser.add_argument("-f", "--freq", type=float, required=True)
     parser.add_argument("-r", "--rate", default=1e6, type=float)
     parser.add_argument("-d", "--txduration", default=10, type=int)
-    parser.add_argument("-t", "--txgain", type=int, default=50)
+    parser.add_argument("-t", "--txgain", type=int, default=60)
     parser.add_argument("-g", "--rxgain", type=int, default=38)
     parser.add_argument("--wfreq", default=1e5, type=float)
     parser.add_argument("--wampl", default=0.5, type=float)
     parser.add_argument("-n", "--nsamps", default=256, type=int)
     return parser.parse_args()
-        
+
 if __name__ == "__main__":
     args = parse_args()
     meas = MeasurementsController()
