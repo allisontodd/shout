@@ -24,7 +24,8 @@ def compute_psd(nfft, samples):
     result = np.nan_to_num(10.0 * np.log10(result))
     return result
 
-def plot_stuff(*args):
+def plot_stuff(title, *args):
+    plt.suptitle("Client: %s" % title)
     plt.plot(*args)
     plt.show()
 
@@ -130,6 +131,7 @@ class MeasurementsController:
             if self.pipe.poll(WAITTIME):
                 rmsg.ParseFromString(self.pipe.recv())
                 clientid = self._get_attr(rmsg, "clientid")
+                clientname = self._get_attr(rmsg, "clientname")
                 if clientid != clients[0]:
                     vals = np.zeros(args.nsamps, dtype=np.complex64)
                     for kv in rmsg.attributes:
@@ -139,7 +141,8 @@ class MeasurementsController:
                     psd = compute_psd(len(vals), vals)
                     freqs = np.fft.fftshift(np.fft.fftfreq(len(vals),
                                                            1/args.rate))
-                    plproc = mp.Process(target=plot_stuff, args=(freqs, psd))
+                    plproc = mp.Process(target=plot_stuff,
+                                        args=(clientname, freqs, psd))
                     plproc.start()
                 else:
                     print("=== Call response:\n%s" % rmsg)
@@ -154,8 +157,8 @@ def parse_args():
     parser.add_argument("-f", "--freq", type=float, required=True)
     parser.add_argument("-r", "--rate", default=1e6, type=float)
     parser.add_argument("-d", "--txduration", default=10, type=int)
-    parser.add_argument("-t", "--txgain", type=int, default=60)
-    parser.add_argument("-g", "--rxgain", type=int, default=38)
+    parser.add_argument("-t", "--txgain", type=int, default=30)
+    parser.add_argument("-g", "--rxgain", type=int, default=30)
     parser.add_argument("--wfreq", default=1e5, type=float)
     parser.add_argument("--wampl", default=0.5, type=float)
     parser.add_argument("-n", "--nsamps", default=256, type=int)
