@@ -119,7 +119,7 @@ class MeasurementsController:
                        args.wfreq, args.wampl, [clients[0]])
         time.sleep(5)
         self.get_samples(args.nsamps, args.freq, args.rxgain, args.rate,
-                         [clients[1:]])
+                         clients[1:])
 
         # Get/process results
         rmsg = measpb.SessionMsg()
