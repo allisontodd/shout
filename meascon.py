@@ -105,7 +105,7 @@ class MeasurementsController:
             self._add_attr(msg, "clientid", client)
             self.pipe.send(msg.SerializeToString())
             
-    def run(self):
+    def run(self, args):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
         self.netproc = mp.Process(target=self.connector.run,
@@ -114,20 +114,14 @@ class MeasurementsController:
         time.sleep(10) # TEMP
         
         # DO STUFF HERE.
-        tfreq = 2e9
-        srate = 1e6
-        txgain = 60
-        rxgain = 38
-        wampl = 0.9
-        wfreq = 2e5
-        dur = 20
-        nsamps = 256
         clients = self.get_clients()
-        self.xmit_sine(dur, tfreq, txgain, srate, wfreq, wampl, [clients[0]])
+        self.xmit_sine(args.duration, args.freq, args.txgain, args.rate,
+                       args.wfreq, args.wampl, [clients[0]])
         time.sleep(5)
-        self.get_samples(nsamps, tfreq, rxgain, srate, [clients[1]])
+        self.get_samples(args.nsamps, args.freq, args.rxgain, args.rate,
+                         [clients[1]])
 
-        # Get results
+        # Get/process results
         rmsg = measpb.SessionMsg()
         wcount = 0
         self.logger.info("Waiting for client responses...")
@@ -136,13 +130,14 @@ class MeasurementsController:
                 rmsg.ParseFromString(self.pipe.recv())
                 clientid = self._get_attr(rmsg, "clientid")
                 if clientid == clients[1]:
-                    vals = np.zeros(nsamps, dtype=np.complex64)
+                    vals = np.zeros(args.nsamps, dtype=np.complex64)
                     for kv in rmsg.attributes:
                         if kv.key.startswith("s"):
                             idx = int(kv.key[1:])
                             vals[idx] = complex(kv.val)
                     psd = compute_psd(len(vals), vals)
-                    freqs = np.fft.fftshift(np.fft.fftfreq(len(vals), 1/srate))
+                    freqs = np.fft.fftshift(np.fft.fftfreq(len(vals),
+                                                           1/args.rate))
                     plproc = mp.Process(target=plot_stuff, args=(freqs, psd))
                     plproc.start()
                 else:
@@ -152,12 +147,20 @@ class MeasurementsController:
         self.logger.info("Done with calls...")
         self.netproc.join()
 
+def parse_args():
+    """Parse the command line arguments"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--freq", type=float, required=True)
+    parser.add_argument("-r", "--rate", default=1e6, type=float)
+    parser.add_argument("-d", "--txduration", default=10.0, type=float)
+    parser.add_argument("-g", "--txgain", type=int, default=50)
+    parser.add_argument("-g", "--rxgain", type=int, default=38)
+    parser.add_argument("--wfreq", default=1e5, type=float)
+    parser.add_argument("--wampl", default=0.5, type=float)
+    parser.add_argument("-n", "--nsamps", default=256, type=int)
+    return parser.parse_args()
+        
 if __name__ == "__main__":
-    # Daemonize
-    #dcxt = daemon.DaemonContext(umask=0o022)
-    #dcxt.open()
-
-    # Set up logging.
-
+    args = parse_args()
     meas = MeasurementsController()
-    meas.run()
+    meas.run(args)
