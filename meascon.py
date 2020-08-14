@@ -5,6 +5,7 @@ import time
 import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
@@ -115,7 +116,7 @@ class MeasurementsController:
         
         # DO STUFF HERE.
         clients = self.get_clients()
-        self.xmit_sine(args.duration, args.freq, args.txgain, args.rate,
+        self.xmit_sine(args.txduration, args.freq, args.txgain, args.rate,
                        args.wfreq, args.wampl, [clients[0]])
         time.sleep(5)
         self.get_samples(args.nsamps, args.freq, args.rxgain, args.rate,
@@ -152,8 +153,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--freq", type=float, required=True)
     parser.add_argument("-r", "--rate", default=1e6, type=float)
-    parser.add_argument("-d", "--txduration", default=10.0, type=float)
-    parser.add_argument("-g", "--txgain", type=int, default=50)
+    parser.add_argument("-d", "--txduration", default=10, type=int)
+    parser.add_argument("-t", "--txgain", type=int, default=50)
     parser.add_argument("-g", "--rxgain", type=int, default=38)
     parser.add_argument("--wfreq", default=1e5, type=float)
     parser.add_argument("--wampl", default=0.5, type=float)
