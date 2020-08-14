@@ -7,7 +7,7 @@ import uhd
 import numpy as np
 
 class Radio:
-    TUNE_CLEAR_COUNT = 10
+    TUNE_CLEAR_COUNT = 100
 
     def __init__(self, usrp_args = "", chan = 0):
         self.usrp = uhd.usrp.MultiUSRP(usrp_args)

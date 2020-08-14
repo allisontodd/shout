@@ -113,7 +113,7 @@ class ClientConnector:
     def handle_result(self, msg, conn):
         # Pass result back to server.
         self._add_attr(msg, "clientid", str(self.sid))
-        self._add_attr(msg, "clientname", socket.gethostname())
+        self._add_attr(msg, "clientname", socket.gethostname().split('.',1)[0])
         self._send_msg(self.sock, msg)
 
     def handle_hb(self, msg, conn):
