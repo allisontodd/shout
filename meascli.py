@@ -7,6 +7,7 @@ import logging
 import time
 import multiprocessing as mp
 import numpy as np
+import daemon
 
 import measurements_pb2 as measpb
 from clientconnector import ClientConnector
@@ -24,13 +25,13 @@ class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
     SEND_SAMPS_COUNT = 10
     
-    def __init__(self, servip, servport):
+    def __init__(self, servaddr, servport, radio_args = ""):
         self.pipe = None
         self.conproc = None
         self.logger = None
         self.setup_logger()
-        self.radio = Radio()
-        self.connector = ClientConnector(servip, servport)
+        self.radio = Radio(radio_args)
+        self.connector = ClientConnector(servaddr, servport)
 
     def setup_logger(self):
         fmat = logging.Formatter(fmt='%(asctime)s:%(levelname)s: %(message)s',
@@ -119,6 +120,20 @@ class MeasurementsClient:
         "xmit_sine": xmit_sine,
     }
 
+def parse_args():
+    """Parse the command line arguments"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--args", help="USRP radio arguments", default="", type=str)
+    parser.add_argument("-h", "--host", help="Orchestrator host to connect to", default=DEF_IP, type=str)
+    parser.add_argument("-p", "--port", help="Orchestrator port", default=DEF_PORT, type=int)
+    parser.add_argument("-f", "--foreground", help="Run in foreground (don't daemonize)", action="store_true")
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    meascli = MeasurementsClient(DEF_IP, DEF_PORT)
+    args = parse_args()
+    if !args.foreground:
+        # Daemonize
+        dcxt = daemon.DaemonContext(umask=0o022)
+        dcxt.open()
+    meascli = MeasurementsClient(args.host, args.port, args.args)
     meascli.run()

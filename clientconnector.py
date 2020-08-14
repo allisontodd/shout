@@ -15,10 +15,11 @@ DEF_PORT = 5555
 
 
 class ClientConnector:
-    MAX_CONN_TRIES = 10
+    MAX_CONN_TRIES = 12 * 15  # Each try waits CONN_SLEEP seconds before next.
+    CONN_SLEEP = 5
     
-    def __init__(self, srvip, srvport):
-        self.srvip = srvip
+    def __init__(self, srvaddr, srvport):
+        self.srvip = socket.gethostbyname(srvaddr)
         self.srvport = srvport
         self.logger = None
         self.pipe = None
@@ -69,7 +70,7 @@ class ClientConnector:
                 if tries > self.MAX_CONN_TRIES:
                     self.logger.error("Too many connection attempts! Exiting.")
                     raise Exception("Too many connection attempts! Exiting.")
-                time.sleep(1)
+                time.sleep(self.CONN_SLEEP)
 
     def _readsock(self, conn, mask):
         msg = self._get_msg_from_sock(conn)
