@@ -163,7 +163,7 @@ class MeasurementsController:
         with open(args.cmdfile) as cfile:
             commands = json.load(cfile)
             for command in commands:
-                self.CMD_DISPATCH[command{'cmd'}](command)
+                self.CMD_DISPATCH[command['cmd']](command)
 
         self.logger.info("Done with commands...")
         self.netproc.join()
