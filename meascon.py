@@ -169,11 +169,11 @@ class MeasurementsController:
         self.netproc.join()
 
     CMD_DISPATCH = {
-        "pause":     MeasurementsController.cmd_pause,
-        "txsine":    MeasurementsController.cmd_txsine,
-        "rxsamples": MeasurementsController.cmd_rxsamples,
-        "wait_results": MeasurementsController.cmd_waitres,
-        "plot_psd:": MeasurementsController.cmd_plotpsd,
+        "pause":        cmd_pause,
+        "txsine":       cmd_txsine,
+        "rxsamples":    cmd_rxsamples,
+        "wait_results": cmd_waitres,
+        "plot_psd:":    cmd_plotpsd,
     }
 
 
