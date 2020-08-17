@@ -120,7 +120,7 @@ class MeasurementsController:
         self.get_samples(cmd['nsamps'], cmd['freq'], cmd['rxgain'], cmd['rate'],
                          clients = cmd['client_list'])
 
-    def wait_results(self, cmd):
+    def cmd_waitres(self, cmd):
         clients = cmd['client_list']
         waittime = time.time() + cmd['wait_time']
         self.last_results = []
@@ -135,7 +135,7 @@ class MeasurementsController:
                     self.last_results.append(rmsg)
                     del clients[clientname]
 
-    def plot_psd(self, cmd):
+    def cmd_plotpsd(self, cmd):
         for res in self.last_results:
             if self._get_attr(res, "funcname") != "recv_samples": continue
             clientname = self._get_attr(res, 'clientname')
