@@ -108,7 +108,7 @@ class MeasurementsController:
 
     def cmd_pause(self, cmd):
         self.logger.info("Pausing for %d seconds" % cmd['duration'])
-        time.sleep(cmd['pause_time'])
+        time.sleep(cmd['duration'])
 
     def cmd_txsine(self, cmd):
         self.logger.info("Transmitting sine on: %s", cmd['client_list'])
