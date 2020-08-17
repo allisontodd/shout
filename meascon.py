@@ -107,7 +107,7 @@ class MeasurementsController:
             self.pipe.send(msg.SerializeToString())
 
     def cmd_pause(self, cmd):
-        self.logger.info("Pausing for %d seconds" % cmd['pause_time'])
+        self.logger.info("Pausing for %d seconds" % cmd['duration'])
         time.sleep(cmd['pause_time'])
 
     def cmd_txsine(self, cmd):
@@ -117,7 +117,7 @@ class MeasurementsController:
 
     def cmd_rxsamples(self, cmd):
         self.logger.info("Receiving samples from: %s", cmd['client_list'])
-        self.get_samples(cmd['nsamps'], cmd['freq'], cmd['rxgain'], cmd['rate'],
+        self.get_samples(cmd['nsamps'], cmd['freq'], cmd['gain'], cmd['rate'],
                          clients = cmd['client_list'])
 
     def cmd_waitres(self, cmd):
