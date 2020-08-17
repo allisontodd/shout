@@ -107,7 +107,7 @@ class MeasurementsController:
             self.pipe.send(msg.SerializeToString())
 
     def cmd_pause(self, cmd):
-        self.logger.info("Pausing for %d seconds" % cmd{'pause_time'})
+        self.logger.info("Pausing for %d seconds" % cmd['pause_time'])
         time.sleep(cmd{'pause_time'})
 
     def cmd_txsine(self, cmd):
