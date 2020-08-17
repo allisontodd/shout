@@ -6,14 +6,10 @@ import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import json
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
-
-LOGFILE="/var/tmp/mcontroller.log"
-
-WAITTIME = 10
-MAXWCOUNT = 6
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""
@@ -30,11 +26,14 @@ def plot_stuff(title, *args):
     plt.show()
 
 class MeasurementsController:
+    POLLTIME = 10
+    LOGFILE="/var/tmp/mcontroller.log"
 
     def __init__(self):
         self.clients = {}
         self.pipe = None
         self.conproc = None
+        self.last_results = []
         self.setup_logger()
         self.connector = ServerConnector()
 
@@ -43,7 +42,7 @@ class MeasurementsController:
                                  datefmt='%Y-%m-%d %H:%M:%S')
         shandler = logging.StreamHandler()
         shandler.setFormatter(fmat)
-        fhandler = logging.FileHandler(LOGFILE)
+        fhandler = logging.FileHandler(self.LOGFILE)
         fhandler.setFormatter(fmat)
         self.logger = mp.get_logger()
         self.logger.setLevel(logging.DEBUG)
@@ -107,61 +106,81 @@ class MeasurementsController:
             self._add_attr(msg, "clientid", client)
             self.pipe.send(msg.SerializeToString())
 
+    def cmd_pause(self, cmd):
+        self.logger.info("Pausing for %d seconds" % cmd{'pause_time'})
+        time.sleep(cmd{'pause_time'})
+
+    def cmd_txsine(self, cmd):
+        self.logger.info("Transmitting sine on: %s", cmd['client_list'])
+        self.xmit_sine(cmd['duration'], cmd['freq'], cmd['gain'], cmd['rate'],
+                       cmd['wfreq'], cmd['wampl'], clients = cmd['client_list'])
+
+    def cmd_rxsamples(self, cmd):
+        self.logger.info("Receiving samples from: %s", cmd['client_list'])
+        self.get_samples(cmd['nsamps'], cmd['freq'], cmd['rxgain'], cmd['rate'],
+                         clients = cmd['client_list'])
+
+    def wait_results(self, cmd):
+        clients = cmd['client_list']
+        waittime = time.time() + cmd['wait_time']
+        self.last_results = []
+        while time.time() < waittime or len(clients):
+            if self.pipe.poll(self.POLLTIME):
+                rmsg = measpb.SessionMsg()
+                rmsg.ParseFromString(self.pipe.recv())
+                clientid = self._get_attr(rmsg, "clientid")
+                clientname = self._get_attr(rmsg, "clientname")
+                self.logger.info("Received result from: %s", clientname)
+                if clientname in clients:
+                    self.last_results.append(rmsg)
+                    del clients[clientname]
+
+    def plot_psd(self, cmd):
+        for res in self.last_results:
+            if self._get_attr(res, "funcname") != "recv_samples": continue
+            clientname = self._get_attr(res, 'clientname')
+            rate = int(self._get_attr(res, 'sample_rate'))
+            arr = []
+            for kv in res.attributes:
+                if kv.key.startswith("s"):
+                    idx = int(kv.key[1:])
+                    arr.append(complex(kv.val))
+            vals = np.array(arr, dtype=np.complex64)
+            psd = compute_psd(len(vals), vals)
+            freqs = np.fft.fftshift(np.fft.fftfreq(len(vals), 1/rate))
+            plproc = mp.Process(target=plot_stuff,
+                                args=(clientname, freqs, psd))
+            plproc.start()
+
     def run(self, args):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
         self.netproc = mp.Process(target=self.connector.run,
                                   args=(c2, self.logger))
         self.netproc.start()
-        time.sleep(10) # TEMP
 
-        # DO STUFF HERE.
-        clients = self.get_clients()
-        self.xmit_sine(args.txduration, args.freq, args.txgain, args.rate,
-                       args.wfreq, args.wampl, [clients[0]])
-        time.sleep(5)
-        self.get_samples(args.nsamps, args.freq, args.rxgain, args.rate,
-                         clients[1:])
+        # Read in and execute commands
+        with open(args.cmdfile) as cfile:
+            commands = json.load(cfile)
+            for command in commands:
+                self.CMD_DISPATCH[command{'cmd'}](command)
 
-        # Get/process results
-        rmsg = measpb.SessionMsg()
-        wcount = 0
-        self.logger.info("Waiting for client responses...")
-        while wcount < MAXWCOUNT:
-            if self.pipe.poll(WAITTIME):
-                rmsg.ParseFromString(self.pipe.recv())
-                clientid = self._get_attr(rmsg, "clientid")
-                clientname = self._get_attr(rmsg, "clientname")
-                if clientid != clients[0]:
-                    vals = np.zeros(args.nsamps, dtype=np.complex64)
-                    for kv in rmsg.attributes:
-                        if kv.key.startswith("s"):
-                            idx = int(kv.key[1:])
-                            vals[idx] = complex(kv.val)
-                    psd = compute_psd(len(vals), vals)
-                    freqs = np.fft.fftshift(np.fft.fftfreq(len(vals),
-                                                           1/args.rate))
-                    plproc = mp.Process(target=plot_stuff,
-                                        args=(clientname, freqs, psd))
-                    plproc.start()
-                else:
-                    print("=== Call response:\n%s" % rmsg)
-            else:
-                wcount += 1
-        self.logger.info("Done with calls...")
+        self.logger.info("Done with commands...")
         self.netproc.join()
+
+    CMD_DISPATCH = {
+        "pause":     MeasurementsController.cmd_pause,
+        "txsine":    MeasurementsController.cmd_txsine,
+        "rxsamples": MeasurementsController.cmd_rxsamples,
+        "wait_results": MeasurementsController.cmd_waitres,
+        "plot_psd:": MeasurementsController.cmd_plotpsd,
+    }
+
 
 def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--freq", type=float, required=True)
-    parser.add_argument("-r", "--rate", default=1e6, type=float)
-    parser.add_argument("-d", "--txduration", default=10, type=int)
-    parser.add_argument("-t", "--txgain", type=int, default=30)
-    parser.add_argument("-g", "--rxgain", type=int, default=30)
-    parser.add_argument("--wfreq", default=1e5, type=float)
-    parser.add_argument("--wampl", default=0.5, type=float)
-    parser.add_argument("-n", "--nsamps", default=256, type=int)
+    parser.add_argument("-f", "--cmdfile", type=str, required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
