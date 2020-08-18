@@ -68,7 +68,7 @@ class MeasurementsClient:
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
         self._add_attr(rmsg, "funcname", self._get_attr(msg, "funcname"))
-        self._add_attr(rmsg, "sample_rate", self._get_attr(msg, "rate"))
+        self._add_attr(rmsg, "rate", self._get_attr(msg, "sample_rate"))
         nsamps = int(self._get_attr(msg, "nsamples"))
         tfreq  = float(self._get_attr(msg, "tune_freq"))
         gain   = int(self._get_attr(msg, "gain"))
