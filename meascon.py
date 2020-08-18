@@ -131,9 +131,11 @@ class MeasurementsController:
                 clientid = self._get_attr(rmsg, "clientid")
                 clientname = self._get_attr(rmsg, "clientname")
                 self.logger.info("Received result from: %s", clientname)
-                if clientname in clients:
-                    self.last_results.append(rmsg)
-                    del clients[clientname]
+                for i in range(len(clients)):
+                    if clients[i] == clientname:
+                        self.last_results.append(rmsg)
+                        del clients[i]
+                        break
 
     def cmd_plotpsd(self, cmd):
         for res in self.last_results:
