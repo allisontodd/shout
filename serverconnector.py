@@ -15,10 +15,11 @@ import multiprocessing as mp
 import measurements_pb2 as measpb
 
 class Client:
-    def __init__(self, name, port, sid, conn):
-        self.name = name
+    def __init__(self, host, port, sid, name, conn):
+        self.host = host
         self.port = port
         self.sid = sid
+        self.name = name
         self.conn = conn
         self.last = time.time()
 
@@ -96,6 +97,11 @@ class ServerConnector:
             if cli.sid == sid: return cli
         return None
 
+    def _get_client_with_name(self, name):
+        for cli in self.clients.values():
+            if cli.name == name: return cli
+        return None
+
     def _get_attr(self, msg, key):
         for kv in msg.attributes:
             if kv.key == key: return kv.val
@@ -105,9 +111,10 @@ class ServerConnector:
         sid = msg.sid
         if not sid:
             sid = random.getrandbits(31)
+        name = self._get_attr(msg, "clientname")
         peerinfo = conn.getpeername()
         self.logger.info("INIT message from %s:%s" % peerinfo)
-        self.clients[repr(peerinfo)] = Client(*peerinfo, sid, conn)
+        self.clients[repr(peerinfo)] = Client(*peerinfo, sid, name, conn)
         msg.sid = sid
         self._send_msg(conn, msg)
 
@@ -125,7 +132,11 @@ class ServerConnector:
                     self._send_msg(cli.conn, msg)
             else:
                 self.logger.debug("Sending '%s' call to client %s" % (func, clientid))
-                cli = self._get_client_with_sid(int(clientid))
+                cli = None
+                if type(clientid) == str:
+                    cli = self._get_client_with_name(clientid)
+                else:
+                    cli = self._get_client_with_sid(clientid)
                 self._send_msg(cli.conn, msg)
 
     def handle_result(self, msg, conn):

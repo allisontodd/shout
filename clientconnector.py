@@ -21,6 +21,7 @@ class ClientConnector:
     def __init__(self, srvaddr, srvport):
         self.srvip = socket.gethostbyname(srvaddr)
         self.srvport = srvport
+        self.name = socket.gethostname().split('.',1)[0]
         self.logger = None
         self.pipe = None
         self.sock = None
@@ -113,7 +114,7 @@ class ClientConnector:
     def handle_result(self, msg, conn):
         # Pass result back to server.
         self._add_attr(msg, "clientid", str(self.sid))
-        self._add_attr(msg, "clientname", socket.gethostname().split('.',1)[0])
+        self._add_attr(msg, "clientname", self.name)
         self._send_msg(self.sock, msg)
 
     def handle_hb(self, msg, conn):
@@ -127,6 +128,7 @@ class ClientConnector:
         msg = measpb.SessionMsg()
         msg.type = measpb.SessionMsg.INIT
         msg.sid = self.sid
+        self._add_attr(msg, "clientname", self.name)
         self._send_msg(self.sock, msg)
 
     def run(self, pipe, logger):
