@@ -124,7 +124,7 @@ class MeasurementsController:
         clients = cmd['client_list']
         waittime = time.time() + cmd['wait_time']
         self.last_results = []
-        while time.time() < waittime or len(clients):
+        while time.time() < waittime and len(clients):
             if self.pipe.poll(self.POLLTIME):
                 rmsg = measpb.SessionMsg()
                 rmsg.ParseFromString(self.pipe.recv())
