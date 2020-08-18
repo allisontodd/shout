@@ -175,7 +175,7 @@ class MeasurementsController:
         "txsine":       cmd_txsine,
         "rxsamples":    cmd_rxsamples,
         "wait_results": cmd_waitres,
-        "plot_psd:":    cmd_plotpsd,
+        "plot_psd":    cmd_plotpsd,
     }
 
 
