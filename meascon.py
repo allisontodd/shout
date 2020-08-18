@@ -141,7 +141,7 @@ class MeasurementsController:
         for res in self.last_results:
             if self._get_attr(res, "funcname") != "recv_samples": continue
             clientname = self._get_attr(res, 'clientname')
-            rate = float(self._get_attr(res, 'sample_rate'))
+            rate = float(self._get_attr(res, 'rate'))
             arr = []
             for kv in res.attributes:
                 if kv.key.startswith("s"):
