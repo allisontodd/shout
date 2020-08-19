@@ -28,7 +28,7 @@ class Radio:
         rx_stream_cmd.stream_now = True
         self.rxstreamer.issue_stream_cmd(rx_stream_cmd)
 
-    def _stop_rxstreamser(self):
+    def _stop_rxstreamer(self):
         stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
         self.rxstreamer.issue_stream_cmd(stream_cmd)
 
