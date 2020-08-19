@@ -60,7 +60,7 @@ class MeasurementsClient:
         self.logger.info("Received Echo Request. Sending response.")
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
-        self._add_attr(rmsg, "funcname", "echo")
+        self._add_attr(rmsg, "funcname", self._get_attr(msg), "funcname")
         self._add_attr(rmsg, "type", "reply")
         self.pipe.send(rmsg.SerializeToString())
 
@@ -68,7 +68,7 @@ class MeasurementsClient:
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
         self._add_attr(rmsg, "funcname", self._get_attr(msg, "funcname"))
-        self._add_attr(rmsg, "rate", self._get_attr(msg, "sample_rate"))
+        self._add_attr(rmsg, "sample_rate", self._get_attr(msg, "sample_rate"))
         nsamps = int(self._get_attr(msg, "nsamples"))
         tfreq  = float(self._get_attr(msg, "tune_freq"))
         gain   = int(self._get_attr(msg, "gain"))
@@ -76,10 +76,9 @@ class MeasurementsClient:
         self.logger.info("Collecting %d samples." % nsamps)
         self.radio.tune(tfreq, gain, srate)
         samples = self.radio.recv_samples(nsamps)
-        i = 0
         for samp in samples[0]:
-            self._add_attr(rmsg, "s%d" % i, str(samp))
-            i += 1
+            msamp = rmsg.samples.add()
+            msamp.r, msamp.j = samp.real, samp.imag
         self.pipe.send(rmsg.SerializeToString())
 
     def xmit_sine(self, msg):

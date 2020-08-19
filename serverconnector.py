@@ -10,9 +10,12 @@ import selectors
 import struct
 import random
 import select
+import ipaddress
 import multiprocessing as mp
 
 import measurements_pb2 as measpb
+
+IPRANGES = ['155.98.32.0/20']
 
 class Client:
     def __init__(self, host, port, sid, name, conn):
@@ -35,6 +38,9 @@ class ServerConnector:
         self.pipe = None
         self.logger = None
         self.sel = selectors.DefaultSelector()
+        self.ipranges = []
+        for ipr in IPRANGES:
+            self.iprange.append(ipaddress.IPv4Network(ipr))
 
     def _setuplistener(self):
         lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -46,7 +52,18 @@ class ServerConnector:
 
     def _accept(self, sock, mask):
         (conn, addr) = sock.accept()
-        self.logger.info("Accepted connection: %s:%s" % conn.getpeername())
+        (ip, port) = conn.getpeername()
+        ipobj = ipaddress.IPv4Address(ip)
+        validip = False
+        for iprange in self.ipranges:
+            if ipobj in iprange:
+                validip = True
+                break
+        if not validip:
+            self.logger.info("Rejected connection from %s" % ip)
+            conn.close()
+            return
+        self.logger.info("Accepted connection: %s:%s" % (ip, port))
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self._readsock)
 
@@ -120,24 +137,22 @@ class ServerConnector:
 
     def handle_call(self, msg, conn):
         func = self._get_attr(msg, "funcname")
-        clientid = self._get_attr(msg, "clientid")
+        clients = msg.clients
+        msg.ClearField("clients")
         if func in self.CALLS:
             # Handle calls meant for the connector (this class).
             self._send_msg(conn, self.CALLS[func](self, msg))
-        elif clientid:
+        elif clients:
             # Send along calls destined for measurement clients.
-            if clientid == "all":
+            if clients[0] == "all":
                 self.logger.debug("Sending '%s' call to all clients" % func)
                 for cli in self.clients.values():
                     self._send_msg(cli.conn, msg)
             else:
-                self.logger.debug("Sending '%s' call to client %s" % (func, clientid))
-                cli = None
-                if type(clientid) == str:
-                    cli = self._get_client_with_name(clientid)
-                else:
-                    cli = self._get_client_with_sid(clientid)
-                self._send_msg(cli.conn, msg)
+                self.logger.debug("Sending '%s' call to clients: %s" % (func, clients))
+                for cname in clients:
+                    cli = self._get_client_with_name(cname)
+                    self._send_msg(cli.conn, msg)
 
     def handle_result(self, msg, conn):
         # Just pass up to measurements controller for now.
@@ -160,10 +175,7 @@ class ServerConnector:
         rmsg = measpb.SessionMsg()
         #rmsg.uuid = msg.uuid
         rmsg.type = measpb.SessionMsg.RESULT
-        for cli in self.clients.values():
-            attr = rmsg.attributes.add()
-            attr.key = "client"
-            attr.val = str(cli.sid)
+        rmsg.clients.extend([cli.name for cli in self.clients.values()])
         return rmsg
 
     def run(self, pipe, logger):

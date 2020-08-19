@@ -67,11 +67,7 @@ class MeasurementsController:
         self.pipe.send(cmsg.SerializeToString())
         rmsg = measpb.SessionMsg()
         rmsg.ParseFromString(self.pipe.recv())
-        clients = []
-        for kv in rmsg.attributes:
-            if kv.key == "client":
-                clients.append(kv.val)
-        return clients
+        return rmsg.clients
 
     def get_samples(self, nsamps, tfreq, gain, srate, clients = ["all"]):
         # Call "recv" on list of clients
@@ -83,13 +79,11 @@ class MeasurementsController:
         self._add_attr(msg, "tune_freq", str(tfreq))
         self._add_attr(msg, "gain", str(gain))
         self._add_attr(msg, "sample_rate", str(srate))
-        for client in clients:
-            tmsg = measpb.SessionMsg()
-            tmsg.CopyFrom(msg)
-            self._add_attr(tmsg, "clientid", client)
-            self.pipe.send(tmsg.SerializeToString())
+        msg.clients.extend(clients)
+        self.pipe.send(msg.SerializeToString())
 
     def xmit_sine(self, duration, tfreq, gain, srate, wfreq, wampl, clients = ["all"]):
+        # Transmit sine wave on list of clients.
         self.logger.info("Transmitting sine wave on client(s)")
         msg = measpb.SessionMsg()
         msg.type = measpb.SessionMsg.CALL
@@ -100,26 +94,34 @@ class MeasurementsController:
         self._add_attr(msg, "sample_rate", str(srate))
         self._add_attr(msg, "wave_freq", str(wfreq))
         self._add_attr(msg, "wave_ampl", str(wampl))
-        for client in clients:
-            tmsg = measpb.SessionMsg()
-            tmsg.CopyFrom(msg)
-            self._add_attr(msg, "clientid", client)
-            self.pipe.send(msg.SerializeToString())
+        msg.clients.extend(clients)
+        self.pipe.send(msg.SerializeToString())
 
     def cmd_pause(self, cmd):
         self.logger.info("Pausing for %d seconds" % cmd['duration'])
         time.sleep(cmd['duration'])
 
     def cmd_txsine(self, cmd):
-        self.logger.info("Transmitting sine on: %s", cmd['client_list'])
+        self.logger.info("Transmitting sine on: %s" % cmd['client_list'])
         self.xmit_sine(cmd['duration'], cmd['freq'], cmd['gain'], cmd['rate'],
                        cmd['wfreq'], cmd['wampl'], clients = cmd['client_list'])
 
     def cmd_rxsamples(self, cmd):
-        self.logger.info("Receiving samples from: %s", cmd['client_list'])
+        self.logger.info("Receiving samples from: %s" % cmd['client_list'])
         self.get_samples(cmd['nsamps'], cmd['freq'], cmd['gain'], cmd['rate'],
                          clients = cmd['client_list'])
 
+    def cmd_measpower(self, cmd):
+        self.logger.info("Measuring power on: %s" % cmd['client_list'])
+        msg = measpb.SessionMsg()
+        msg.type = measpb.SessionMsg.CALL
+        self._add_attr(msg, "funcname", "measure_power")
+        self._add_attr(msg, "duration", str(duration))
+        self._add_attr(msg, "freq_min", str(cmd['freq_min']))
+        self._add_attr(msg, "freq_max", str(cmd['freq_max']))
+        msg.clients.extend(cmd['client_list'])
+        self.pipe.send(msg.SerializeToString())
+        
     def cmd_waitres(self, cmd):
         clients = cmd['client_list']
         waittime = time.time() + cmd['wait_time']
@@ -141,13 +143,9 @@ class MeasurementsController:
         for res in self.last_results:
             if self._get_attr(res, "funcname") != "recv_samples": continue
             clientname = self._get_attr(res, 'clientname')
-            rate = float(self._get_attr(res, 'rate'))
-            arr = []
-            for kv in res.attributes:
-                if kv.key.startswith("s"):
-                    idx = int(kv.key[1:])
-                    arr.append(complex(kv.val))
-            vals = np.array(arr, dtype=np.complex64)
+            rate = float(self._get_attr(res, 'sample_rate'))
+            vals = np.array([complex(c.r, c.j) for c in res.samples],
+                            dtype=np.complex64)
             psd = compute_psd(len(vals), vals)
             freqs = np.fft.fftshift(np.fft.fftfreq(len(vals), 1/rate))
             plproc = mp.Process(target=plot_stuff,
@@ -171,11 +169,12 @@ class MeasurementsController:
         self.netproc.join()
 
     CMD_DISPATCH = {
-        "pause":        cmd_pause,
-        "txsine":       cmd_txsine,
-        "rxsamples":    cmd_rxsamples,
-        "wait_results": cmd_waitres,
-        "plot_psd":    cmd_plotpsd,
+        "pause":         cmd_pause,
+        "txsine":        cmd_txsine,
+        "rxsamples":     cmd_rxsamples,
+        "wait_results":  cmd_waitres,
+        "plot_psd":      cmd_plotpsd,
+        "measure_power": cmd_measpower,
     }
 
 

@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12measurements.proto\x12\x0cmeasurements\"\xf8\x01\n\nSessionMsg\x12\x0b\n\x03sid\x18\x01 \x01(\x05\x12\x0c\n\x04uuid\x18\x02 \x01(\x05\x12.\n\x04type\x18\x03 \x01(\x0e\x32 .measurements.SessionMsg.MsgType\x12\x33\n\nattributes\x18\x04 \x03(\x0b\x32\x1f.measurements.SessionMsg.KeyVal\x1a\"\n\x06KeyVal\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0b\n\x03val\x18\x02 \x01(\t\"F\n\x07MsgType\x12\x08\n\x04INIT\x10\x00\x12\t\n\x05\x43LOSE\x10\x01\x12\x08\n\x04\x43\x41LL\x10\x02\x12\n\n\x06RESULT\x10\x03\x12\x06\n\x02HB\x10\x04\x12\x08\n\x04\x45\x43HO\x10\x05\x62\x06proto3'
+  serialized_pb=b'\n\x12measurements.proto\x12\x0cmeasurements\"\xd3\x02\n\nSessionMsg\x12\x0b\n\x03sid\x18\x01 \x01(\x05\x12\x0c\n\x04uuid\x18\x02 \x01(\x05\x12.\n\x04type\x18\x03 \x01(\x0e\x32 .measurements.SessionMsg.MsgType\x12\x0f\n\x07\x63lients\x18\x04 \x03(\t\x12\x31\n\x07samples\x18\x05 \x03(\x0b\x32 .measurements.SessionMsg.Complex\x12\x33\n\nattributes\x18\x06 \x03(\x0b\x32\x1f.measurements.SessionMsg.KeyVal\x1a\x1f\n\x07\x43omplex\x12\t\n\x01r\x18\x01 \x01(\x02\x12\t\n\x01j\x18\x02 \x01(\x02\x1a\"\n\x06KeyVal\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0b\n\x03val\x18\x02 \x01(\t\"<\n\x07MsgType\x12\x08\n\x04INIT\x10\x00\x12\t\n\x05\x43LOSE\x10\x01\x12\x08\n\x04\x43\x41LL\x10\x02\x12\n\n\x06RESULT\x10\x03\x12\x06\n\x02HB\x10\x04\x62\x06proto3'
 )
 
 
@@ -56,19 +56,52 @@ _SESSIONMSG_MSGTYPE = _descriptor.EnumDescriptor(
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
-    _descriptor.EnumValueDescriptor(
-      name='ECHO', index=5, number=5,
-      serialized_options=None,
-      type=None,
-      create_key=_descriptor._internal_create_key),
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=215,
-  serialized_end=285,
+  serialized_start=316,
+  serialized_end=376,
 )
 _sym_db.RegisterEnumDescriptor(_SESSIONMSG_MSGTYPE)
 
+
+_SESSIONMSG_COMPLEX = _descriptor.Descriptor(
+  name='Complex',
+  full_name='measurements.SessionMsg.Complex',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='r', full_name='measurements.SessionMsg.Complex.r', index=0,
+      number=1, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='j', full_name='measurements.SessionMsg.Complex.j', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=247,
+  serialized_end=278,
+)
 
 _SESSIONMSG_KEYVAL = _descriptor.Descriptor(
   name='KeyVal',
@@ -104,8 +137,8 @@ _SESSIONMSG_KEYVAL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=179,
-  serialized_end=213,
+  serialized_start=280,
+  serialized_end=314,
 )
 
 _SESSIONMSG = _descriptor.Descriptor(
@@ -138,8 +171,22 @@ _SESSIONMSG = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='attributes', full_name='measurements.SessionMsg.attributes', index=3,
-      number=4, type=11, cpp_type=10, label=3,
+      name='clients', full_name='measurements.SessionMsg.clients', index=3,
+      number=4, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='samples', full_name='measurements.SessionMsg.samples', index=4,
+      number=5, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='attributes', full_name='measurements.SessionMsg.attributes', index=5,
+      number=6, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -147,7 +194,7 @@ _SESSIONMSG = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_SESSIONMSG_KEYVAL, ],
+  nested_types=[_SESSIONMSG_COMPLEX, _SESSIONMSG_KEYVAL, ],
   enum_types=[
     _SESSIONMSG_MSGTYPE,
   ],
@@ -158,17 +205,26 @@ _SESSIONMSG = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=37,
-  serialized_end=285,
+  serialized_end=376,
 )
 
+_SESSIONMSG_COMPLEX.containing_type = _SESSIONMSG
 _SESSIONMSG_KEYVAL.containing_type = _SESSIONMSG
 _SESSIONMSG.fields_by_name['type'].enum_type = _SESSIONMSG_MSGTYPE
+_SESSIONMSG.fields_by_name['samples'].message_type = _SESSIONMSG_COMPLEX
 _SESSIONMSG.fields_by_name['attributes'].message_type = _SESSIONMSG_KEYVAL
 _SESSIONMSG_MSGTYPE.containing_type = _SESSIONMSG
 DESCRIPTOR.message_types_by_name['SessionMsg'] = _SESSIONMSG
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 SessionMsg = _reflection.GeneratedProtocolMessageType('SessionMsg', (_message.Message,), {
+
+  'Complex' : _reflection.GeneratedProtocolMessageType('Complex', (_message.Message,), {
+    'DESCRIPTOR' : _SESSIONMSG_COMPLEX,
+    '__module__' : 'measurements_pb2'
+    # @@protoc_insertion_point(class_scope:measurements.SessionMsg.Complex)
+    })
+  ,
 
   'KeyVal' : _reflection.GeneratedProtocolMessageType('KeyVal', (_message.Message,), {
     'DESCRIPTOR' : _SESSIONMSG_KEYVAL,
@@ -181,6 +237,7 @@ SessionMsg = _reflection.GeneratedProtocolMessageType('SessionMsg', (_message.Me
   # @@protoc_insertion_point(class_scope:measurements.SessionMsg)
   })
 _sym_db.RegisterMessage(SessionMsg)
+_sym_db.RegisterMessage(SessionMsg.Complex)
 _sym_db.RegisterMessage(SessionMsg.KeyVal)
 
 
