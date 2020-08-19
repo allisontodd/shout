@@ -40,7 +40,7 @@ class ServerConnector:
         self.sel = selectors.DefaultSelector()
         self.ipranges = []
         for ipr in IPRANGES:
-            self.iprange.append(ipaddress.IPv4Network(ipr))
+            self.ipranges.append(ipaddress.IPv4Network(ipr))
 
     def _setuplistener(self):
         lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
