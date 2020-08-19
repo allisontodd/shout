@@ -14,6 +14,7 @@ class Radio:
         self.channel = chan
         self.rxstreamer = None
         self.txstreamer = None
+        self._setup_streamers()
 
     def _setup_streamers(self):
         # Set up streamers
