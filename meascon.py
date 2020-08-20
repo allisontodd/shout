@@ -10,6 +10,7 @@ import json
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
+from rpccalls import RPCCALLS
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""
@@ -69,58 +70,15 @@ class MeasurementsController:
         rmsg.ParseFromString(self.pipe.recv())
         return rmsg.clients
 
-    def get_samples(self, nsamps, tfreq, gain, srate, clients = ["all"]):
-        # Call "recv" on list of clients
-        self.logger.info("Gathering samples.")
-        msg = measpb.SessionMsg()
-        msg.type = measpb.SessionMsg.CALL
-        self._add_attr(msg, "funcname", "recv_samples")
-        self._add_attr(msg, "nsamples", str(nsamps))
-        self._add_attr(msg, "tune_freq", str(tfreq))
-        self._add_attr(msg, "gain", str(gain))
-        self._add_attr(msg, "sample_rate", str(srate))
-        msg.clients.extend(clients)
-        self.pipe.send(msg.SerializeToString())
-
-    def xmit_sine(self, duration, tfreq, gain, srate, wfreq, wampl, clients = ["all"]):
-        # Transmit sine wave on list of clients.
-        self.logger.info("Transmitting sine wave on client(s)")
-        msg = measpb.SessionMsg()
-        msg.type = measpb.SessionMsg.CALL
-        self._add_attr(msg, "funcname", "xmit_sine")
-        self._add_attr(msg, "duration", str(duration))
-        self._add_attr(msg, "tune_freq", str(tfreq))
-        self._add_attr(msg, "gain", str(gain))
-        self._add_attr(msg, "sample_rate", str(srate))
-        self._add_attr(msg, "wave_freq", str(wfreq))
-        self._add_attr(msg, "wave_ampl", str(wampl))
-        msg.clients.extend(clients)
-        self.pipe.send(msg.SerializeToString())
+    def rpc_call(self, cmd):
+        self.logger.info("Running %s on: %s" % (cmd['cmd'], cmd['client_list']))
+        cmsg = RPCCALLS[cmd['cmd']](**cmd)
+        cmsg.clients.extend(cmd['client_list'])
+        self.pipe.send(cmsg.SerializeToString)
 
     def cmd_pause(self, cmd):
         self.logger.info("Pausing for %d seconds" % cmd['duration'])
         time.sleep(cmd['duration'])
-
-    def cmd_txsine(self, cmd):
-        self.logger.info("Transmitting sine on: %s" % cmd['client_list'])
-        self.xmit_sine(cmd['duration'], cmd['freq'], cmd['gain'], cmd['rate'],
-                       cmd['wfreq'], cmd['wampl'], clients = cmd['client_list'])
-
-    def cmd_rxsamples(self, cmd):
-        self.logger.info("Receiving samples from: %s" % cmd['client_list'])
-        self.get_samples(cmd['nsamps'], cmd['freq'], cmd['gain'], cmd['rate'],
-                         clients = cmd['client_list'])
-
-    def cmd_measpower(self, cmd):
-        self.logger.info("Measuring power on: %s" % cmd['client_list'])
-        msg = measpb.SessionMsg()
-        msg.type = measpb.SessionMsg.CALL
-        self._add_attr(msg, "funcname", "measure_power")
-        self._add_attr(msg, "duration", str(duration))
-        self._add_attr(msg, "freq_min", str(cmd['freq_min']))
-        self._add_attr(msg, "freq_max", str(cmd['freq_max']))
-        msg.clients.extend(cmd['client_list'])
-        self.pipe.send(msg.SerializeToString())
         
     def cmd_waitres(self, cmd):
         clients = cmd['client_list']
@@ -163,18 +121,18 @@ class MeasurementsController:
         with open(args.cmdfile) as cfile:
             commands = json.load(cfile)
             for command in commands:
-                self.CMD_DISPATCH[command['cmd']](self, command)
+                if command['cmd'] in CMD_DISPATCH:
+                    self.CMD_DISPATCH[command['cmd']](self, command)
+                else:
+                    self.rpc_call(command)
 
         self.logger.info("Done with commands...")
         self.netproc.join()
 
     CMD_DISPATCH = {
         "pause":         cmd_pause,
-        "txsine":        cmd_txsine,
-        "rxsamples":     cmd_rxsamples,
         "wait_results":  cmd_waitres,
         "plot_psd":      cmd_plotpsd,
-        "measure_power": cmd_measpower,
     }
 
 
