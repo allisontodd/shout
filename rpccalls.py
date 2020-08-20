@@ -14,7 +14,7 @@ def get_attr(msg, key):
 def add_attr(msg, key, val):
     attr = msg.attributes.add()
     attr.key = key
-    attr.val = val
+    attr.val = str(val)
 
 class RPCCall:
     def __init__(self, funcname, funcargs = {}):
@@ -25,12 +25,9 @@ class RPCCall:
         cmsg = measpb.SessionMsg()
         cmsg.type = measpb.SessionMsg.CALL
         add_attr(cmsg, 'funcname', self.funcname)
-        for aname,adict in self.funcargs:
+        for aname,adict in self.funcargs.items():
             if aname in kwargs:
-                val = kwargs[aname]
-                if type(val) != adict['type']:
-                    raise RuntimeError("Argument does not match type signature")
-                add_attr(cmsg, aname, val)
+                add_attr(cmsg, aname, kwargs[aname])
             else:
                 add_attr(cmsg, aname, adict['default'])
         return cmsg

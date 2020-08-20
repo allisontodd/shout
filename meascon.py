@@ -72,9 +72,9 @@ class MeasurementsController:
 
     def rpc_call(self, cmd):
         self.logger.info("Running %s on: %s" % (cmd['cmd'], cmd['client_list']))
-        cmsg = RPCCALLS[cmd['cmd']](**cmd)
+        cmsg = RPCCALLS[cmd['cmd']].call(**cmd)
         cmsg.clients.extend(cmd['client_list'])
-        self.pipe.send(cmsg.SerializeToString)
+        self.pipe.send(cmsg.SerializeToString())
 
     def cmd_pause(self, cmd):
         self.logger.info("Pausing for %d seconds" % cmd['duration'])
@@ -121,7 +121,7 @@ class MeasurementsController:
         with open(args.cmdfile) as cfile:
             commands = json.load(cfile)
             for command in commands:
-                if command['cmd'] in CMD_DISPATCH:
+                if command['cmd'] in self.CMD_DISPATCH:
                     self.CMD_DISPATCH[command['cmd']](self, command)
                 else:
                     self.rpc_call(command)
