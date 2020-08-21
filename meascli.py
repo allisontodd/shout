@@ -108,8 +108,8 @@ class MeasurementsClient:
 
     CALLS = {
         "echo": echo_reply,
-        "recv_samples": recv_samps,
-        "xmit_sine": xmit_sine,
+        "rxsamples": recv_samps,
+        "txsine": xmit_sine,
     }
 
 def parse_args():

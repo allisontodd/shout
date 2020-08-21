@@ -62,7 +62,7 @@ class MeasurementsController:
 
     def rpc_call(self, cmd):
         self.logger.info("Running %s on: %s" % (cmd['cmd'], cmd['client_list']))
-        cmsg = RPCCALLS[cmd['cmd']].call(**cmd)
+        cmsg = RPCCALLS[cmd['cmd']].encode(**cmd)
         cmsg.clients.extend(cmd['client_list'])
         self.pipe.send(cmsg.SerializeToString())
 
@@ -88,7 +88,7 @@ class MeasurementsController:
 
     def cmd_plotpsd(self, cmd):
         for res in self.last_results:
-            get_attr(res, "funcname") != "recv_samples": continue
+            if get_attr(res, "funcname") != "recv_samples": continue
             clientname = get_attr(res, 'clientname')
             rate = float(get_attr(res, 'rate'))
             vals = np.array([complex(c.r, c.j) for c in res.samples],
