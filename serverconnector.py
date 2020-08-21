@@ -15,7 +15,7 @@ import multiprocessing as mp
 
 import measurements_pb2 as measpb
 
-IPRANGES = ['155.98.32.0/20']
+IPRANGES = ['127.0.0.0/8', '155.98.32.0/20']
 
 class Client:
     def __init__(self, host, port, sid, name, conn):
