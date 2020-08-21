@@ -15,24 +15,32 @@ def add_attr(msg, key, val):
     attr = msg.attributes.add()
     attr.key = key
     attr.val = str(val)
-
+    
 class RPCCall:
     def __init__(self, funcname, funcargs = {}):
         self.funcname = funcname
         self.funcargs = funcargs
 
-    def call(self, **kwargs):
+    def encode(self, **kwargs):
         cmsg = measpb.SessionMsg()
         cmsg.type = measpb.SessionMsg.CALL
         add_attr(cmsg, 'funcname', self.funcname)
         for aname,adict in self.funcargs.items():
             if aname in kwargs:
                 add_attr(cmsg, aname, kwargs[aname])
-            else:
-                add_attr(cmsg, aname, adict['default'])
         return cmsg
 
+    def decode(self, cmsg):
+        argdict = {}
+        cattrs = {kv.key: kv.val for kv in cmsg.attributes}
+        for aname,adict in self.funcargs.items():
+            if aname in cattrs:
+                argdict[aname] = adict['type'](cattrs[aname])
+            else:
+                argdict[aname] = adict['default']
+        return argdict
 
+    
 RPCCALLS['txsine'] = \
     RPCCall('txsine',
             {

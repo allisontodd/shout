@@ -10,6 +10,7 @@ import numpy as np
 import daemon
 import argparse
 
+from rpccalls import *
 import measurements_pb2 as measpb
 from clientconnector import ClientConnector
 from radio import Radio
@@ -46,60 +47,46 @@ class MeasurementsClient:
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
-    def _add_attr(self, msg, key, val):
-        attr = msg.attributes.add()
-        attr.key = key
-        attr.val = val
-
-    def _get_attr(self, msg, key):
-        for kv in msg.attributes:
-            if kv.key == key: return kv.val
-        return None
-
     def echo_reply(self, msg):
         self.logger.info("Received Echo Request. Sending response.")
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
-        self._add_attr(rmsg, "funcname", self._get_attr(msg), "funcname")
-        self._add_attr(rmsg, "type", "reply")
+        add_attr(rmsg, "funcname", self._get_attr(msg), "funcname")
+        add_attr(rmsg, "type", "reply")
         self.pipe.send(rmsg.SerializeToString())
 
     def recv_samps(self, msg):
+        funcname = get_attr(msg, 'funcname')
+        args = RPCCALLS[funcname].decode(msg)
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
-        self._add_attr(rmsg, "funcname", self._get_attr(msg, "funcname"))
-        self._add_attr(rmsg, "sample_rate", self._get_attr(msg, "sample_rate"))
-        nsamps = int(self._get_attr(msg, "nsamples"))
-        tfreq  = float(self._get_attr(msg, "tune_freq"))
-        gain   = int(self._get_attr(msg, "gain"))
-        srate  = float(self._get_attr(msg, "sample_rate"))
-        self.logger.info("Collecting %d samples." % nsamps)
-        self.radio.tune(tfreq, gain, srate)
-        samples = self.radio.recv_samples(nsamps)
+        add_attr(rmsg, "funcname", funcname)
+        add_attr(rmsg, "rate", args['rate'])
+        self.logger.info("Collecting %d samples." % args['nsamps'])
+        self.radio.tune(args['tune_freq'], args['gain'], args['rate'])
+        samples = self.radio.recv_samples(args['nsamps'])
         for samp in samples[0]:
             msamp = rmsg.samples.add()
             msamp.r, msamp.j = samp.real, samp.imag
         self.pipe.send(rmsg.SerializeToString())
 
     def xmit_sine(self, msg):
+        funcname = get_attr(msg, 'funcname')
+        args = RPCCALLS[funcname].decode(msg)
         rmsg = measpb.SessionMsg()
         rmsg.type = measpb.SessionMsg.RESULT
-        self._add_attr(rmsg, "funcname", self._get_attr(msg, "funcname"))
-        tfreq  = float(self._get_attr(msg, "tune_freq"))
-        gain   = int(self._get_attr(msg, "gain"))
-        srate  = float(self._get_attr(msg, "sample_rate"))
-        end    = time.time() + int(self._get_attr(msg, "duration"))
-        wfreq  = float(self._get_attr(msg, "wave_freq"))
-        wampl  = float(self._get_attr(msg, "wave_ampl"))
-        nsamps = np.floor(srate/wfreq)
+        add_attr(rmsg, "funcname", funcname)
+        end    = time.time() + args['duration']
+        nsamps = np.floor(args['rate']/args['wfreq'])
         nsamps *= np.ceil(self.XMIT_SAMPS_MIN/nsamps)
-        sinebuf = mk_sine(int(nsamps), wampl, wfreq, srate)
-        self.logger.info("Sending sine wave with freq %f" % wfreq)
-        self.radio.tune(tfreq, gain, srate)
+        sinebuf = mk_sine(int(nsamps), args['wampl'], args['wfreq'],
+                          args['rate'])
+        self.logger.info("Sending sine wave with freq %f" % args['wfreq'])
+        self.radio.tune(args['tune_freq'], args['gain'], args['rate'])
         while time.time() < end:
             for i in range(self.SEND_SAMPS_COUNT):
                 self.radio.send_samples(sinebuf)
-        self._add_attr(rmsg, "result", "done")
+        add_attr(rmsg, "result", "done")
         self.pipe.send(rmsg.SerializeToString())
         
     def run(self):
@@ -112,9 +99,11 @@ class MeasurementsClient:
         while True:
             msg = measpb.SessionMsg()
             msg.ParseFromString(self.pipe.recv())
-            func = self._get_attr(msg, "funcname")
+            func = get_attr(msg, "funcname")
             if func in self.CALLS:
                 self.CALLS[func](self, msg)
+            else:
+                self.logger.error("Unknown function called: %s" % func)
 
 
     CALLS = {

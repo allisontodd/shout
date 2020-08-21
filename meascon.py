@@ -10,7 +10,7 @@ import json
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
-from rpccalls import RPCCALLS
+from rpccalls import *
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""
@@ -50,21 +50,11 @@ class MeasurementsController:
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
-    def _get_attr(self, msg, key):
-        for kv in msg.attributes:
-            if kv.key == key: return kv.val
-        return None
-
-    def _add_attr(self, msg, key, val):
-        attr = msg.attributes.add()
-        attr.key = key
-        attr.val = val
-
     def get_clients(self):
         # Get list of clients
         cmsg = measpb.SessionMsg()
         cmsg.type = measpb.SessionMsg.CALL
-        self._add_attr(cmsg, "funcname", ServerConnector.CALL_GETCLIENTS)
+        add_attr(cmsg, "funcname", ServerConnector.CALL_GETCLIENTS)
         self.pipe.send(cmsg.SerializeToString())
         rmsg = measpb.SessionMsg()
         rmsg.ParseFromString(self.pipe.recv())
@@ -88,8 +78,7 @@ class MeasurementsController:
             if self.pipe.poll(self.POLLTIME):
                 rmsg = measpb.SessionMsg()
                 rmsg.ParseFromString(self.pipe.recv())
-                clientid = self._get_attr(rmsg, "clientid")
-                clientname = self._get_attr(rmsg, "clientname")
+                clientname = get_attr(rmsg, "clientname")
                 self.logger.info("Received result from: %s", clientname)
                 for i in range(len(clients)):
                     if clients[i] == clientname:
@@ -99,9 +88,9 @@ class MeasurementsController:
 
     def cmd_plotpsd(self, cmd):
         for res in self.last_results:
-            if self._get_attr(res, "funcname") != "recv_samples": continue
-            clientname = self._get_attr(res, 'clientname')
-            rate = float(self._get_attr(res, 'sample_rate'))
+            get_attr(res, "funcname") != "recv_samples": continue
+            clientname = get_attr(res, 'clientname')
+            rate = float(get_attr(res, 'rate'))
             vals = np.array([complex(c.r, c.j) for c in res.samples],
                             dtype=np.complex64)
             psd = compute_psd(len(vals), vals)
