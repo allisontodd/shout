@@ -90,7 +90,7 @@ class MeasurementsController:
 
     def cmd_plotpsd(self, cmd):
         for res in self.last_results:
-            if get_attr(res, "funcname") != "recv_samples": continue
+            if not res.samples: continue
             clientname = get_attr(res, 'clientname')
             rate = float(get_attr(res, 'rate'))
             vals = np.array([complex(c.r, c.j) for c in res.samples],
