@@ -25,8 +25,8 @@
 
     {
         "cmd": "wait_results",
-        "client_list": ["cbrssdr1-ustar-comp", "cbrssdr1-honors-comp"],
-        "wait_time": 30
+        "client_list": ["all"],
+        "timeout": 20
     },
 
     {"cmd": "plot_psd"}

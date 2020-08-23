@@ -63,7 +63,7 @@ class MeasurementsClient:
         add_attr(rmsg, "funcname", funcname)
         add_attr(rmsg, "rate", args['rate'])
         self.logger.info("Collecting %d samples." % args['nsamps'])
-        self.radio.tune(args['tune_freq'], args['gain'], args['rate'])
+        self.radio.tune(args['freq'], args['gain'], args['rate'])
         samples = self.radio.recv_samples(args['nsamps'])
         for samp in samples[0]:
             msamp = rmsg.samples.add()
@@ -82,7 +82,7 @@ class MeasurementsClient:
         sinebuf = mk_sine(int(nsamps), args['wampl'], args['wfreq'],
                           args['rate'])
         self.logger.info("Sending sine wave with freq %f" % args['wfreq'])
-        self.radio.tune(args['tune_freq'], args['gain'], args['rate'])
+        self.radio.tune(args['freq'], args['gain'], args['rate'])
         while time.time() < end:
             for i in range(self.SEND_SAMPS_COUNT):
                 self.radio.send_samples(sinebuf)

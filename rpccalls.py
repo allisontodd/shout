@@ -45,7 +45,7 @@ RPCCALLS['txsine'] = \
     RPCCall('txsine',
             {
                 'duration':  {'type': int, 'default': 0},
-                'tune_freq': {'type': float, 'default': None},
+                'freq':      {'type': float, 'default': None},
                 'gain':      {'type': float, 'default': 30.0},
                 'rate':      {'type': float, 'default': 1e6},
                 'wfreq':     {'type': float, 'default': 1e5},
@@ -56,7 +56,7 @@ RPCCALLS['rxsamples'] = \
     RPCCall('rxsamples',
             {
                 'nsamps':    {'type': int, 'default': 256},
-                'tune_freq': {'type': float, 'default': None},
+                'freq':      {'type': float, 'default': None},
                 'gain':      {'type': float, 'default': 30.0},
                 'rate':      {'type': float, 'default': 1e6},
             })

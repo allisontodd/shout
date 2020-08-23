@@ -72,7 +72,9 @@ class MeasurementsController:
         
     def cmd_waitres(self, cmd):
         clients = cmd['client_list']
-        waittime = time.time() + cmd['wait_time']
+        if clients[0] == "all":
+            clients = self.get_clients()
+        waittime = time.time() + cmd['timeout']
         self.last_results = []
         while time.time() < waittime and len(clients):
             if self.pipe.poll(self.POLLTIME):

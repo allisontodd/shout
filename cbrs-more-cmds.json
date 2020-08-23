@@ -25,14 +25,12 @@
 
     {
         "cmd": "wait_results",
-        "client_list": ["cbrssdr1-ustar-comp", "cbrssdr1-honors-comp"],
-        "wait_time": 10
+        "client_list": ["all"],
+        "timeout": 30
     },
 
     {"cmd": "plot_psd"},
 
-    {"cmd": "wait_results", "client_list": ["cbrssdr1-browning-comp"], "wait_time": 20},
-    
     {
         "cmd": "txsine",
         "duration": 25,
@@ -57,11 +55,9 @@
 
     {
         "cmd": "wait_results",
-        "client_list": ["cbrssdr1-browning-comp", "cbrssdr1-honors-comp"],
-        "wait_time": 10
+        "client_list": ["all"],
+        "timeout": 20
     },
 
     {"cmd": "plot_psd"},
-
-    {"cmd": "wait_results", "client_list": ["cbrssdr1-ustar-comp"], "wait_time": 20}
 ]
