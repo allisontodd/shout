@@ -60,3 +60,14 @@ RPCCALLS['rxsamples'] = \
                 'gain':      {'type': float, 'default': 30.0},
                 'rate':      {'type': float, 'default': 1e6},
             })
+
+RPCCALLS['measure_power'] = \
+    RPCCall('measure_power',
+            {
+                'nsamps':    {'type': int, 'default': 256},
+                'freq':      {'type': float, 'default': None},
+                'gain':      {'type': float, 'default': 30.0},
+                'rate':      {'type': float, 'default': 1e6},
+                'f_low':     {'type': float, 'default': 0.9e5},
+                'f_high':    {'type': float, 'default': 1.1e5},
+            })

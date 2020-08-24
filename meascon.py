@@ -72,7 +72,7 @@ class MeasurementsController:
         
     def cmd_waitres(self, cmd):
         clients = cmd['client_list']
-        if clients[0] == "all":
+        if not clients or clients[0] == "all":
             clients = self.get_clients()
         waittime = time.time() + cmd['timeout']
         self.last_results = []
@@ -101,6 +101,15 @@ class MeasurementsController:
                                 args=(clientname, freqs, psd))
             plproc.start()
 
+    def cmd_printres(self, cmd):
+        doall = False
+        if 'client_list' not in cmd or cmd['client_list'][0] == "all":
+            doall = True
+        for res in self.last_results:
+            clientname = get_attr(res, 'clientname')
+            if doall or clientname in cmd['client_list']:
+                print(res)
+
     def run(self, args):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -124,6 +133,7 @@ class MeasurementsController:
         "pause":         cmd_pause,
         "wait_results":  cmd_waitres,
         "plot_psd":      cmd_plotpsd,
+        "print_results": cmd_printres,
     }
 
 
