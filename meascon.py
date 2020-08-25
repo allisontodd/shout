@@ -29,6 +29,7 @@ def plot_stuff(title, *args):
 class MeasurementsController:
     POLLTIME = 10
     LOGFILE="/var/tmp/mcontroller.log"
+    DEF_TOFF = 2
 
     def __init__(self):
         self.clients = {}
@@ -101,6 +102,14 @@ class MeasurementsController:
                                 args=(clientname, freqs, psd))
             plproc.start()
 
+    def cmd_seqmeas(self, cmd):
+        toff = self.DEF_TOFF
+        if 'toff' in cmd:
+            toff = cmd['toff']
+        start = np.ceil(time.now()) + toff
+        cmd['start_time'] = start
+        self.rpc_call(cmd)
+        
     def cmd_printres(self, cmd):
         doall = False
         if 'client_list' not in cmd or cmd['client_list'][0] == "all":
@@ -134,6 +143,7 @@ class MeasurementsController:
         "wait_results":  cmd_waitres,
         "plot_psd":      cmd_plotpsd,
         "print_results": cmd_printres,
+        "seq_measure":   cmd_seqmeas,
     }
 
 

@@ -35,6 +35,7 @@ def get_avg_power(samps):
 class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
     SEND_SAMPS_COUNT = 10
+    FOFF = 1e4
     
     def __init__(self, servaddr, servport, radio_args = ""):
         self.pipe = None
@@ -91,7 +92,26 @@ class MeasurementsClient:
         samps = self.radio.recv_samples(args['nsamps'])
         fsamps = butter_filt(samps, args['f_low'], args['f_high'], args['rate'])
         add_attr(rmsg, "power", get_avg_power(fsamps))
-        
+
+    def seq_measure(self, args, rmsg):
+        self.logger.info("Performing sequential measurements...")
+        self.radio.tune(args['freq'], args['gain'], args['rate'])
+        steps = np.floor(args['rate']/args['freq_step']/2)
+        for i in range(steps):
+            freq = args['freq'] + i*args['freq_step']
+            now = time.time()
+            time.sleep(args['start_time'] + 2*i*args['time_step'] - now)
+            samps = self.radio.recv_samples(args['nsamps'])
+            fsamps = butter_filt(samps, freq-self.FOFF, freq+self.FOFF,
+                                 args['rate'])
+            pwr1 = get_avg_power(fsamps)
+            now = time.time()
+            time.sleep(args['start_time'] + 2*i*args['time_step']+1 - now)
+            samps = self.radio.recv_samples(args['nsamps'])
+            fsamps = butter_filt(samps, freq-self.FOFF, freq+self.FOFF,
+                                 args['rate'])
+            rmsg.measurements.append(np.abs(get_avg_power(fsamps) - pwr1))
+
     def run(self):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
@@ -119,6 +139,7 @@ class MeasurementsClient:
         "rxsamples": recv_samps,
         "txsine": xmit_sine,
         "measure_power": meas_power,
+        "seq_measure": seq_measure,
     }
 
 def parse_args():

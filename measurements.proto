@@ -33,12 +33,15 @@ message SessionMsg {
 	float j = 2;
     }
     repeated Complex samples = 5;
-    
+
+    // For non-complex-valued measurements.
+    repeated float measurements = 6;
+
     // keyval pair for general message attributes
     message KeyVal {
 	string key = 1;
 	string val = 2;
     }
     // KV attributes for this session message
-    repeated KeyVal attributes = 6;
+    repeated KeyVal attributes = 7;
 }

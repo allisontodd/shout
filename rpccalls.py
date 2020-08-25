@@ -71,3 +71,15 @@ RPCCALLS['measure_power'] = \
                 'f_low':     {'type': float, 'default': 0.9e5},
                 'f_high':    {'type': float, 'default': 1.1e5},
             })
+
+RPCCALLS['seq_measure'] = \
+    RPCCall('seq_measure',
+            {
+                'nsamps':    {'type': int, 'default': 256},
+                'freq':      {'type': float, 'default': None},
+                'gain':      {'type': float, 'default': 30.0},
+                'rate':      {'type': float, 'default': 1e6},
+                'start_time':{'type': float, 'default': None},
+                'freq_step': {'type': float, 'default': 5e4},
+                'time_step': {'type': float, 'default': 1},
+            })
