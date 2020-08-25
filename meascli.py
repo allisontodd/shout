@@ -98,17 +98,17 @@ class MeasurementsClient:
         self.radio.tune(args['freq'], args['gain'], args['rate'])
         steps = int(np.floor(args['rate']/args['freq_step']/2))
         for i in range(steps):
-            freq = args['freq'] + i*args['freq_step']
+            mfreq = i*args['freq_step']
             now = time.time()
             time.sleep(args['start_time'] + 2*i*args['time_step'] - now)
             samps = self.radio.recv_samples(args['nsamps'])
-            fsamps = butter_filt(samps, freq-self.FOFF, freq+self.FOFF,
+            fsamps = butter_filt(samps, mfreq-self.FOFF, mfreq+self.FOFF,
                                  args['rate'])
             pwr1 = get_avg_power(fsamps)
             now = time.time()
             time.sleep(args['start_time'] + 2*i*args['time_step']+1 - now)
             samps = self.radio.recv_samples(args['nsamps'])
-            fsamps = butter_filt(samps, freq-self.FOFF, freq+self.FOFF,
+            fsamps = butter_filt(samps, mfreq-self.FOFF, mfreq+self.FOFF,
                                  args['rate'])
             rmsg.measurements.append(np.abs(get_avg_power(fsamps) - pwr1))
 
