@@ -106,7 +106,7 @@ class MeasurementsController:
         toff = self.DEF_TOFF
         if 'toff' in cmd:
             toff = cmd['toff']
-        start = np.ceil(time.now()) + toff
+        start = np.ceil(time.time()) + toff
         cmd['start_time'] = start
         self.rpc_call(cmd)
         
