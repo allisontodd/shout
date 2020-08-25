@@ -96,7 +96,7 @@ class MeasurementsClient:
     def seq_measure(self, args, rmsg):
         self.logger.info("Performing sequential measurements...")
         self.radio.tune(args['freq'], args['gain'], args['rate'])
-        steps = np.floor(args['rate']/args['freq_step']/2)
+        steps = int(np.floor(args['rate']/args['freq_step']/2))
         for i in range(steps):
             freq = args['freq'] + i*args['freq_step']
             now = time.time()
