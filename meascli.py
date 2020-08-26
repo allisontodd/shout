@@ -36,7 +36,7 @@ class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
     SEND_SAMPS_COUNT = 10
     FOFF = 1e4
-    TOFF = 0.05
+    TOFF = 0.1
     
     def __init__(self, servaddr, servport, radio_args = ""):
         self.pipe = None
