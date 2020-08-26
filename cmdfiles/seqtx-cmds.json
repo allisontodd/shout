@@ -1,0 +1,16 @@
+[
+ {"cmd": "pause", "duration": 10},
+ {
+	"cmd": "seq_transmit",
+	"nsamps": 1024,
+	"freq": 2e9,
+	"gain": 38,
+	"rate": 1e6,
+	"wampl": 0.8,
+	"freq_step": 5e4,
+	"time_step": 3,
+	"client_list": ["node1"]
+ },
+ {"cmd": "wait_results", "client_list": ["node1"], "timeout": 60},
+ {"cmd": "print_results"}
+]
