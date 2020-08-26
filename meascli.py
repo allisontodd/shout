@@ -36,6 +36,7 @@ class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
     SEND_SAMPS_COUNT = 10
     FOFF = 1e4
+    TOFF = 0.05
     
     def __init__(self, servaddr, servport, radio_args = ""):
         self.pipe = None
@@ -72,45 +73,43 @@ class MeasurementsClient:
             msamp.r, msamp.j = samp.real, samp.imag
 
     def xmit_sine(self, args, rmsg):
-        end    = time.time() + args['duration']
+        self.logger.info("Sending sine wave with freq %f" % args['wfreq'])
+        self.radio.tune(args['freq'], args['gain'], args['rate'])
+        args['end_time'] = time.time() + args['duration']
+        self._do_xmit(args, rmsg)
+        add_attr(rmsg, "result", "done")
+
+    def meas_power(self, args, rmsg):
+        self.radio.tune(args['freq'], args['gain'], args['rate'])
+        self._do_meas_power(args, rmsg)
+
+    def _do_meas_power(self, args, rmsg):
+        flo, fhi = args['wfreq']-self.FOFF, args['wfreq']+self.FOFF
+        self.logger.info("Sampling power between %f and %f" %
+                         (args['freq'] + flo, args['freq'] + fhi))
+        samps = self.radio.recv_samples(args['nsamps'])
+        fsamps = butter_filt(samps, flo, fhi, args['rate'])
+        rmsg.measurements.append(get_avg_power(fsamps))
+
+    def _do_xmit(self, args, rmsg):
         nsamps = np.floor(args['rate']/args['wfreq'])
         nsamps *= np.ceil(self.XMIT_SAMPS_MIN/nsamps)
         sinebuf = mk_sine(int(nsamps), args['wampl'], args['wfreq'],
                           args['rate'])
-        self.logger.info("Sending sine wave with freq %f" % args['wfreq'])
-        self.radio.tune(args['freq'], args['gain'], args['rate'])
-        while time.time() < end:
+        while time.time() < args['end_time']:
             for i in range(self.SEND_SAMPS_COUNT):
                 self.radio.send_samples(sinebuf)
-        add_attr(rmsg, "result", "done")
 
-    def meas_power(self, args, rmsg):
-        self.logger.info("Sampling power between %f and %f" %
-                         (args['freq'] + args['f_low'],
-                          args['freq'] + args['f_high']))
-        self.radio.tune(args['freq'], args['gain'], args['rate'])
-        samps = self.radio.recv_samples(args['nsamps'])
-        fsamps = butter_filt(samps, args['f_low'], args['f_high'], args['rate'])
-        add_attr(rmsg, "power", get_avg_power(fsamps))
-
-    def seq_measure(self, args, rmsg):
-        self.logger.info("Performing sequential measurements...")
+    def _do_seq(self, args, rmsg, func):
+        self.logger.info("Performing radio command sequence...")
         self.radio.tune(args['freq'], args['gain'], args['rate'])
         steps = int(np.floor(args['rate']/args['freq_step']/2))
         for i in range(1,steps):
-            mfreq = i*args['freq_step']
-            now = time.time()
-            time.sleep(args['start_time'] + 2*i*args['time_step'] - now)
-            samps = self.radio.recv_samples(args['nsamps'])
-            fsamps = butter_filt(samps, mfreq-self.FOFF, mfreq+self.FOFF,
-                                 args['rate'])
-            pwr1 = get_avg_power(fsamps)
-            now = time.time()
-            time.sleep(args['start_time'] + 2*i*args['time_step']+1 - now)
-            samps = self.radio.recv_samples(args['nsamps'])
-            fsamps = butter_filt(samps, mfreq-self.FOFF, mfreq+self.FOFF,
-                                 args['rate'])
-            rmsg.measurements.append(np.abs(get_avg_power(fsamps) - pwr1))
+            args['wfreq'] = i*args['freq_step']
+            args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
+                self.TOFF
+            time.sleep(args['start_time'] + i*args['time_step'] - time.time())
+            func(args, rmsg)
 
     def run(self):
         (c1, c2) = mp.Pipe()
@@ -128,7 +127,10 @@ class MeasurementsClient:
                 rmsg = measpb.SessionMsg()
                 rmsg.type = measpb.SessionMsg.RESULT
                 add_attr(rmsg, "funcname", func)
-                self.CALLS[func](self, args, rmsg)
+                if func.startswith('seq'):
+                    self._do_seq(args, rmsg, self.SEQ_CALLS[func])
+                else:
+                    self.CALLS[func](self, args, rmsg)
                 self.pipe.send(rmsg.SerializeToString())
             else:
                 self.logger.error("Unknown function called: %s" % func)
@@ -139,7 +141,11 @@ class MeasurementsClient:
         "rxsamples": recv_samps,
         "txsine": xmit_sine,
         "measure_power": meas_power,
-        "seq_measure": seq_measure,
+    }
+
+    SEQ_CALLS = {
+        "seq_measure":  _do_meas_power,
+        "seq_transmit": _do_xmit,
     }
 
 def parse_args():

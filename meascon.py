@@ -36,10 +36,10 @@ class MeasurementsController:
         self.pipe = None
         self.conproc = None
         self.last_results = []
-        self.setup_logger()
+        self._setup_logger()
         self.connector = ServerConnector()
 
-    def setup_logger(self):
+    def _setup_logger(self):
         fmat = logging.Formatter(fmt='%(asctime)s:%(levelname)s: %(message)s',
                                  datefmt='%Y-%m-%d %H:%M:%S')
         shandler = logging.StreamHandler()
@@ -51,6 +51,13 @@ class MeasurementsController:
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
+    def _set_start(self, cmd):
+        toff = self.DEF_TOFF
+        if 'toff' in cmd:
+            toff = cmd['toff']
+        start = np.ceil(time.time()) + toff
+        cmd['start_time'] = start
+
     def get_clients(self):
         # Get list of clients
         cmsg = measpb.SessionMsg()
@@ -61,7 +68,7 @@ class MeasurementsController:
         rmsg.ParseFromString(self.pipe.recv())
         return rmsg.clients
 
-    def rpc_call(self, cmd):
+    def _rpc_call(self, cmd):
         self.logger.info("Running %s on: %s" % (cmd['cmd'], cmd['client_list']))
         cmsg = RPCCALLS[cmd['cmd']].encode(**cmd)
         cmsg.clients.extend(cmd['client_list'])
@@ -101,14 +108,6 @@ class MeasurementsController:
             plproc = mp.Process(target=plot_stuff,
                                 args=(clientname, freqs, psd))
             plproc.start()
-
-    def cmd_seqmeas(self, cmd):
-        toff = self.DEF_TOFF
-        if 'toff' in cmd:
-            toff = cmd['toff']
-        start = np.ceil(time.time()) + toff
-        cmd['start_time'] = start
-        self.rpc_call(cmd)
         
     def cmd_printres(self, cmd):
         doall = False
@@ -130,10 +129,13 @@ class MeasurementsController:
         with open(args.cmdfile) as cfile:
             commands = json.load(cfile)
             for command in commands:
+                if command['cmd'].startswith('seq'):
+                    self._set_start(cmd)
+
                 if command['cmd'] in self.CMD_DISPATCH:
                     self.CMD_DISPATCH[command['cmd']](self, command)
                 else:
-                    self.rpc_call(command)
+                    self._rpc_call(command)
 
         self.logger.info("Done with commands...")
         self.netproc.join()
@@ -143,7 +145,6 @@ class MeasurementsController:
         "wait_results":  cmd_waitres,
         "plot_psd":      cmd_plotpsd,
         "print_results": cmd_printres,
-        "seq_measure":   cmd_seqmeas,
     }
 
 
