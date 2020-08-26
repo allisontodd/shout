@@ -35,6 +35,7 @@ class MeasurementsController:
         self.clients = {}
         self.pipe = None
         self.conproc = None
+        self.start_time = 0;
         self.last_results = []
         self._setup_logger()
         self.connector = ServerConnector()
@@ -51,12 +52,11 @@ class MeasurementsController:
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
-    def _set_start(self, cmd):
-        toff = self.DEF_TOFF
-        if 'toff' in cmd:
-            toff = cmd['toff']
-        start = np.ceil(time.time()) + toff
-        cmd['start_time'] = start
+    def _set_start_time(self, toff = self.DEF_TOFF):
+        self.start_time = np.ceil(time.time()) + toff
+
+    def _clear_start_time():
+        self.start_time = 0
 
     def get_clients(self):
         # Get list of clients
@@ -129,8 +129,14 @@ class MeasurementsController:
         with open(args.cmdfile) as cfile:
             commands = json.load(cfile)
             for cmd in commands:
-                if cmd['cmd'].startswith('seq'):
-                    self._set_start(cmd)
+                if 'sync' in cmd and cmd['sync'] == True:
+                    if 'toff' in cmd:
+                        self._set_start_time(cmd['toff'])
+                    elif not self.start_time:
+                        self._set_start_time()
+                    cmd['start_time'] = self.start_time
+                else:
+                    self._clear_start_time()
 
                 if cmd['cmd'] in self.CMD_DISPATCH:
                     self.CMD_DISPATCH[cmd['cmd']](self, cmd)
