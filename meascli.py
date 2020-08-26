@@ -85,8 +85,8 @@ class MeasurementsClient:
 
     def _do_meas_power(self, args, rmsg):
         flo, fhi = args['wfreq']-self.FOFF, args['wfreq']+self.FOFF
-        self.logger.info("Sampling power between %f and %f" %
-                         (args['freq'] + flo, args['freq'] + fhi))
+        #self.logger.info("Sampling power between %f and %f" %
+        #                 (args['freq'] + flo, args['freq'] + fhi))
         samps = self.radio.recv_samples(args['nsamps'])
         fsamps = butter_filt(samps, flo, fhi, args['rate'])
         rmsg.measurements.append(get_avg_power(fsamps))
@@ -108,7 +108,9 @@ class MeasurementsClient:
             args['wfreq'] = i*args['freq_step']
             args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
                 self.TOFF
-            time.sleep(args['start_time'] + i*args['time_step'] - time.time())
+            sltime = args['start_time'] + i*args['time_step'] - time.time()
+            if sltime > 0:
+                time.sleep(sltime)
             func(self, args, rmsg)
 
     def run(self):
