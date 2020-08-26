@@ -109,7 +109,7 @@ class MeasurementsClient:
             args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
                 self.TOFF
             time.sleep(args['start_time'] + i*args['time_step'] - time.time())
-            func(args, rmsg)
+            func(self, args, rmsg)
 
     def run(self):
         (c1, c2) = mp.Pipe()
