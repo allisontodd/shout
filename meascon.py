@@ -52,7 +52,7 @@ class MeasurementsController:
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
-    def _set_start_time(self, toff = MeasurementsController.DEF_TOFF):
+    def _set_start_time(self, toff = DEF_TOFF):
         self.start_time = np.ceil(time.time()) + toff
 
     def _clear_start_time(self):
