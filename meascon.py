@@ -128,14 +128,14 @@ class MeasurementsController:
         # Read in and execute commands
         with open(args.cmdfile) as cfile:
             commands = json.load(cfile)
-            for command in commands:
-                if command['cmd'].startswith('seq'):
+            for cmd in commands:
+                if cmd['cmd'].startswith('seq'):
                     self._set_start(cmd)
 
-                if command['cmd'] in self.CMD_DISPATCH:
-                    self.CMD_DISPATCH[command['cmd']](self, command)
+                if cmd['cmd'] in self.CMD_DISPATCH:
+                    self.CMD_DISPATCH[cmd['cmd']](self, cmd)
                 else:
-                    self._rpc_call(command)
+                    self._rpc_call(cmd)
 
         self.logger.info("Done with commands...")
         self.netproc.join()
