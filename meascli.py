@@ -128,25 +128,22 @@ class MeasurementsClient:
                 rmsg.type = measpb.SessionMsg.RESULT
                 add_attr(rmsg, "funcname", func)
                 if func.startswith('seq'):
-                    self._do_seq(args, rmsg, self.SEQ_CALLS[func])
+                    self._do_seq(args, rmsg, self.CALLS[func])
                 else:
                     self.CALLS[func](self, args, rmsg)
                 self.pipe.send(rmsg.SerializeToString())
             else:
                 self.logger.error("Unknown function called: %s" % func)
 
-
     CALLS = {
         "echo": echo_reply,
         "rxsamples": recv_samps,
         "txsine": xmit_sine,
         "measure_power": meas_power,
-    }
-
-    SEQ_CALLS = {
         "seq_measure":  _do_meas_power,
         "seq_transmit": _do_xmit,
     }
+
 
 def parse_args():
     """Parse the command line arguments"""
