@@ -82,3 +82,14 @@ RPCCALLS['seq_measure'] = \
                 'freq_step': {'type': float, 'default': 5e4},
                 'time_step': {'type': float, 'default': 1},
             })
+
+RPCCALLS['seq_transmit'] = \
+    RPCCall('seq_transmit',
+            {
+                'freq':      {'type': float, 'default': None},
+                'gain':      {'type': float, 'default': 30.0},
+                'rate':      {'type': float, 'default': 1e6},
+                'start_time':{'type': float, 'default': None},
+                'freq_step': {'type': float, 'default': 5e4},
+                'time_step': {'type': float, 'default': 1},
+            })
