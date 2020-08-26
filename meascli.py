@@ -104,6 +104,8 @@ class MeasurementsClient:
         self.logger.info("Performing radio command sequence...")
         self.radio.tune(args['freq'], args['gain'], args['rate'])
         steps = int(np.floor(args['rate']/args['freq_step']/2))
+        if not args['start_time']:
+            args['start_time'] = int(np.ceil(time.time()))
         for i in range(1,steps):
             args['wfreq'] = i*args['freq_step']
             args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
