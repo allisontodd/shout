@@ -118,6 +118,25 @@ class MeasurementsController:
             if doall or clientname in cmd['client_list']:
                 print(res)
 
+    def cmd_measpaths(self, cmd):
+        toff = cmd['toff'] if 'toff' in cmd else self.DEF_TOFF
+        clients = cmd['client_list']
+        if not clients or clients[0] == "all":
+            clients = self.get_clients()
+        for txclient in clients:
+            rxclients = [x for x in foo if x != txclient]
+            cmd['start_time'] = np.ceil(time.time()) + toff
+            cmd['gain'] = cmd['txgain']
+            txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
+            txcmd.clients.append(txclient)
+            cmd['gain'] = cmd['rxgain']
+            rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
+            rxcmd.clients.extend(rxclients)
+            self.pipe.send(txcmd.SerializeToString())
+            self.pipe.send(rxcmd.SerializeToString())
+            self.cmd_waitres(cmd)
+            self.cmd_printres({'client_list': rxclients})
+
     def run(self, args):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
