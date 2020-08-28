@@ -126,7 +126,7 @@ class MeasurementsController:
         for txclient in clients:
             notxmeas = {}
             rxclients = [x for x in clients if x != txclient]
-            cmd['start_time'] = np.ceil(time.time()) + toff
+            cmd['start_time'] = 0
             cmd['gain'] = cmd['txgain']
             txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
             txcmd.clients.append(txclient)
@@ -139,6 +139,7 @@ class MeasurementsController:
             for res in self.last_results:
                 cname = get_attr(res, 'clientname')
                 notxmeas[cname] = np.array(res.measurements)
+            cmd['start_time'] = np.ceil(time.time()) + toff
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres(cmd)
