@@ -170,6 +170,7 @@ class MeasurementsController:
         "wait_results":  cmd_waitres,
         "plot_psd":      cmd_plotpsd,
         "print_results": cmd_printres,
+        "measure_paths": cmd_measpaths,
     }
 
 
