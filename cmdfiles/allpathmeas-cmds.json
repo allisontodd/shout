@@ -1,0 +1,17 @@
+[
+ {"cmd": "pause", "duration": 10},
+ {
+     "cmd": "measure_paths",
+     "nsamps": 1024,
+     "freq": 2e9,
+     "txgain": 30,
+     "rxgain": 30,
+     "rate": 1e6,
+     "nsamps": 1024,
+     "wampl": 0.8,
+     "freq_step": 5e4,
+     "time_step": 3,
+     "timeout": 60,
+     "client_list": ["all"]
+ }
+]
