@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 
-import logging
-import time
 import os
+import time
+import argparse
+import logging
+import json
 import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
-import argparse
-import json
+import h5py
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
 from rpccalls import *
 
-OUTDIR="./mcondata"
-LOGFILE="/var/tmp/mcontroller.log"
-LOGLEVEL = logging.DEBUG
+DEF_OUTDIR="./mcondata"
+DEF_DFNAME="measurements.hdf5"
+DEF_LOGFILE="/var/tmp/mcontroller.log"
+LOGLEVEL = logging.INFO
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""
@@ -42,8 +44,10 @@ class MeasurementsController:
         self.pipe = None
         self.conproc = None
         self.datadir = None
-        self.start_time = 0;
+        self.dsfile = None
+        self.start_time = 0
         self.last_results = []
+        self.dfname = args.dfname
         self._setup_logger(args.logfile)
         self._setup_datadir(args.datadir)
         self.connector = ServerConnector()
@@ -70,7 +74,7 @@ class MeasurementsController:
     def _clear_start_time(self):
         self.start_time = 0
 
-    def get_clients(self):
+    def _get_clients(self):
         # Get list of clients
         cmsg = measpb.SessionMsg()
         cmsg.type = measpb.SessionMsg.CALL
@@ -86,6 +90,12 @@ class MeasurementsController:
         cmsg.clients.extend(cmd['client_list'])
         self.pipe.send(cmsg.SerializeToString())
 
+    def _get_datafile(self):
+        if not self.dsfile:
+            self.dsfile = h5py.File("%s/%s" %
+                                    (self.datadir, self.dfname), "a")
+        return self.dsfile
+
     def cmd_pause(self, cmd):
         self.logger.info("Pausing for %d seconds" % cmd['duration'])
         time.sleep(cmd['duration'])
@@ -93,7 +103,7 @@ class MeasurementsController:
     def cmd_waitres(self, cmd):
         clients = cmd['client_list']
         if not clients or clients[0] == "all":
-            clients = self.get_clients()
+            clients = self._get_clients()
         waittime = time.time() + cmd['timeout']
         self.last_results = []
         while time.time() < waittime and len(clients):
@@ -132,34 +142,53 @@ class MeasurementsController:
 
     def cmd_measpaths(self, cmd):
         toff = cmd['toff'] if 'toff' in cmd else self.DEF_TOFF
-        clients = cmd['client_list']
+        dfile = self._get_datafile()
+        if not 'measure_paths' in dfile:
+            dfile.create_group('measure_paths')
+        subgrp = dfile['measure_paths'].create_group("%d" % int(time.time()))
+        subgrp.attrs.update(cmd)
+        clients = None
+        if "client_list" in cmd:
+            clients = cmd['client_list']
+            del cmd['client_list']
         if not clients or clients[0] == "all":
-            clients = self.get_clients()
+            clients = self._get_clients()
+        cmd['gain'] = cmd['txgain']
+        txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
+        cmd['gain'] = cmd['rxgain']
+        rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
+        del cmd['gain']
+
         for txclient in clients:
-            notxmeas = {}
             rxclients = [x for x in clients if x != txclient]
-            cmd['start_time'] = 0
-            cmd['gain'] = cmd['txgain']
-            txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
+            rxcmd.start_time = int(time.time())
+            txcmd.ClearField("clients")
             txcmd.clients.append(txclient)
-            cmd['gain'] = cmd['rxgain']
-            rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
+            rxcmd.ClearField("clients")
             rxcmd.clients.extend(rxclients)
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': rxclients,
                               'timeout': cmd['timeout']})
             for res in self.last_results:
-                cname = get_attr(res, 'clientname')
-                notxmeas[cname] = np.array(res.measurements)
-            cmd['start_time'] = np.ceil(time.time()) + toff
+                rxclient = get_attr(res, 'clientname')
+                arr = np.array(res.measurements)
+                dsname = "%s-%d" % (rxclient, rxcmd.start_time)
+                ds = dfile.create_dataset(dsname, (2,arr.size),
+                                          dtype=np.float32)
+                ds[0] = np.array(res.measurements)
+                ds.attrs['tx'] = txclient
+                ds.attrs['rx'] = rxclient
+            rxcmd.start_time = txcmd.start_time = np.ceil(time.time()) + toff
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres(cmd)
             for res in self.last_results:
                 if not res.measurements: continue
-                cname = get_attr(res, 'clientname')
-                mdiff = np.array(res.measurements) - notxmeas[cname]
-                print("%s: %s" % (cname, mdiff))
+                arr = np.array(res.measurements)
+                rxclient = get_attr(res, 'clientname')
+                dsname = "%s-%d" % (rxclient, rxcmd.start_time)
+                dfile[dsname][1] = arr
+                print(arr - np.array(dfile[dsname][0])
 
     def run(self, cmdfile):
         (c1, c2) = mp.Pipe()
@@ -201,8 +230,10 @@ class MeasurementsController:
 def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--cmdfile", type=str, required=True)
-    parser.add_argument("-o", "--datadir", type=str, default=OUTDIR)
+    parser.add_argument("-c", "--cmdfile", type=str, required=True)
+    parser.add_argument("-l", "--logfile", type=str, default=DEF_LOGFILE)
+    parser.add_argument("-o", "--datadir", type=str, default=DEF_OUTDIR)
+    parser.add_argument("-f", "--dfname", type=str, default=DEF_DFNAME)
     return parser.parse_args()
 
 if __name__ == "__main__":

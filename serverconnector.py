@@ -96,7 +96,7 @@ class ServerConnector:
                 if not rd:
                     self.logger.warning("No data ready for read from socket.")
                 mbuf += conn.recv(mlen - len(mbuf))
-            self.logger.info("Received %d, indicated size %d." % (len(mbuf), mlen))
+            self.logger.debug("Received %d, indicated size %d." % (len(mbuf), mlen))
             smsg = measpb.SessionMsg()
             smsg.ParseFromString(mbuf)
         return smsg

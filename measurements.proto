@@ -24,18 +24,21 @@ message SessionMsg {
     // One of the above types.
     MsgType type = 3;
 
+    // Start time for command
+    float start_time = 4;
+
     // List of clients to receive a message (used controller-side).
-    repeated string clients = 4;
+    repeated string clients = 5;
     
     // Efficient storage of complex samples.
     message Complex {
 	float r = 1;
 	float j = 2;
     }
-    repeated Complex samples = 5;
+    repeated Complex samples = 6;
 
     // For non-complex-valued measurements.
-    repeated float measurements = 6;
+    repeated float measurements = 7;
 
     // keyval pair for general message attributes
     message KeyVal {
@@ -43,5 +46,5 @@ message SessionMsg {
 	string val = 2;
     }
     // KV attributes for this session message
-    repeated KeyVal attributes = 7;
+    repeated KeyVal attributes = 8;
 }

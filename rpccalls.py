@@ -32,6 +32,7 @@ class RPCCall:
 
     def decode(self, cmsg):
         argdict = {}
+        argdict['start_time'] = cmsg.start_time
         cattrs = {kv.key: kv.val for kv in cmsg.attributes}
         for aname,adict in self.funcargs.items():
             if aname in cattrs:
@@ -78,7 +79,6 @@ RPCCALLS['seq_measure'] = \
                 'freq':      {'type': float, 'default': None},
                 'gain':      {'type': float, 'default': 30.0},
                 'rate':      {'type': float, 'default': 1e6},
-                'start_time':{'type': float, 'default': None},
                 'freq_step': {'type': float, 'default': 5e4},
                 'time_step': {'type': float, 'default': 1},
             })
@@ -90,7 +90,6 @@ RPCCALLS['seq_transmit'] = \
                 'gain':      {'type': float, 'default': 30.0},
                 'rate':      {'type': float, 'default': 1e6},
                 'wampl':     {'type': float, 'default': 0.3},
-                'start_time':{'type': float, 'default': None},
                 'freq_step': {'type': float, 'default': 5e4},
                 'time_step': {'type': float, 'default': 1},
             })
