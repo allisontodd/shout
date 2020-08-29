@@ -2,6 +2,7 @@
 
 import logging
 import time
+import os
 import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,6 +12,10 @@ import json
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
 from rpccalls import *
+
+OUTDIR="./mcondata"
+LOGFILE="/var/tmp/mcontroller.log"
+LOGLEVEL = logging.DEBUG
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""
@@ -28,30 +33,37 @@ def plot_stuff(title, *args):
 
 class MeasurementsController:
     POLLTIME = 10
-    LOGFILE="/var/tmp/mcontroller.log"
     DEF_TOFF = 2
+    LOGFMAT = '%(asctime)s:%(levelname)s: %(message)s'
+    LOGDATEFMAT = '%Y-%m-%d %H:%M:%S'
 
-    def __init__(self):
+    def __init__(self, args):
         self.clients = {}
         self.pipe = None
         self.conproc = None
+        self.datadir = None
         self.start_time = 0;
         self.last_results = []
-        self._setup_logger()
+        self._setup_logger(args.logfile)
+        self._setup_datadir(args.datadir)
         self.connector = ServerConnector()
 
-    def _setup_logger(self):
-        fmat = logging.Formatter(fmt='%(asctime)s:%(levelname)s: %(message)s',
-                                 datefmt='%Y-%m-%d %H:%M:%S')
+    def _setup_logger(self, logfile):
+        fmat = logging.Formatter(fmt=self.LOGFMAT, datefmt=self.LOGDATEFMAT)
         shandler = logging.StreamHandler()
         shandler.setFormatter(fmat)
-        fhandler = logging.FileHandler(self.LOGFILE)
+        fhandler = logging.FileHandler(logfile)
         fhandler.setFormatter(fmat)
         self.logger = mp.get_logger()
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(LOGLEVEL)
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
+    def _setup_datadir(self, ddir):
+        self.datadir = ddir
+        if not os.path.exists(ddir):
+            os.mkdir(ddir)
+        
     def _set_start_time(self, toff = DEF_TOFF):
         self.start_time = np.ceil(time.time()) + toff
 
@@ -149,7 +161,7 @@ class MeasurementsController:
                 mdiff = np.array(res.measurements) - notxmeas[cname]
                 print("%s: %s" % (cname, mdiff))
 
-    def run(self, args):
+    def run(self, cmdfile):
         (c1, c2) = mp.Pipe()
         self.pipe = c1
         self.netproc = mp.Process(target=self.connector.run,
@@ -157,7 +169,7 @@ class MeasurementsController:
         self.netproc.start()
 
         # Read in and execute commands
-        with open(args.cmdfile) as cfile:
+        with open(cmdfile) as cfile:
             commands = json.load(cfile)
             for cmd in commands:
                 if 'sync' in cmd and cmd['sync'] == True:
@@ -190,9 +202,10 @@ def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--cmdfile", type=str, required=True)
+    parser.add_argument("-o", "--datadir", type=str, default=OUTDIR)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    meas = MeasurementsController()
-    meas.run(args)
+    meas = MeasurementsController(args)
+    meas.run(args.cmdfile)
