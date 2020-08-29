@@ -188,7 +188,7 @@ class MeasurementsController:
                 rxclient = get_attr(res, 'clientname')
                 dsname = "%s-%d" % (rxclient, rxcmd.start_time)
                 dfile[dsname][1] = arr
-                print(arr - np.array(dfile[dsname][0])
+                print(arr - np.array(dfile[dsname][0]))
 
     def run(self, cmdfile):
         (c1, c2) = mp.Pipe()
