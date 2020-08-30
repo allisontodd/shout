@@ -19,6 +19,7 @@ from radio import Radio
 LOGFILE="/var/tmp/ccontroller.log"
 DEF_IP = "127.0.0.1"
 DEF_PORT = 5555
+DEF_LOGLEVEL = logging.DEBUG
 
 def mk_sine(nsamps, wampl, wfreq, srate):
     vals = np.ones((1,nsamps), dtype=np.complex64) * np.arange(nsamps)
@@ -54,7 +55,7 @@ class MeasurementsClient:
         fhandler = logging.FileHandler(LOGFILE)
         fhandler.setFormatter(fmat)
         self.logger = mp.get_logger()
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(DEF_LOGLEVEL)
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
