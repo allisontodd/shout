@@ -35,7 +35,7 @@ def get_avg_power(samps):
 
 class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
-    SEND_SAMPS_COUNT = 10
+    SEND_SAMPS_COUNT = 5
     FOFF = 1e4
     TOFF = 0.2
     
