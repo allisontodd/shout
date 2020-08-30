@@ -165,6 +165,7 @@ class MeasurementsController:
 
         for txclient in clients:
             rxclients = [x for x in clients if x != txclient]
+            txgrp = measgrp.create_group(txclient)
             stime = rxcmd.start_time = int(time.time())
             txcmd.ClearField("clients")
             txcmd.clients.append(txclient)
@@ -176,10 +177,9 @@ class MeasurementsController:
             for res in self.last_results:
                 rxclient = get_attr(res, 'clientname')
                 arr = np.array(res.measurements)
-                ds = measgrp.create_dataset(rxclient, (2,arr.size),
-                                            dtype=np.float32)
+                ds = txgrp.create_dataset(rxclient, (2,arr.size),
+                                          dtype=np.float32)
                 ds[0] = np.array(res.measurements)
-                ds.attrs['tx'] = txclient
             rxcmd.start_time = txcmd.start_time = np.ceil(time.time()) + toff
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
@@ -189,7 +189,7 @@ class MeasurementsController:
                 if not res.measurements: continue
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
-                ds = measgrp[rxclient]
+                ds = txgrp[rxclient]
                 ds[1] = arr
                 print(arr - np.array(ds[0]))
 
