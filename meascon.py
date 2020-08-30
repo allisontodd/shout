@@ -158,6 +158,7 @@ class MeasurementsController:
         cmd['gain'] = cmd['rxgain']
         rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
         del cmd['gain']
+        del cmd['cmd']
 
         for txclient in clients:
             rxclients = [x for x in clients if x != txclient]
@@ -181,7 +182,8 @@ class MeasurementsController:
             rxcmd.start_time = txcmd.start_time = np.ceil(time.time()) + toff
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
-            self.cmd_waitres(cmd)
+            self.cmd_waitres({'client_list': [txclient, *rxclients],
+                              'timeout': cmd['timeout']})
             for res in self.last_results:
                 if not res.measurements: continue
                 arr = np.array(res.measurements)
