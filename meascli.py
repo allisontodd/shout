@@ -35,9 +35,9 @@ def get_avg_power(samps):
 
 class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
-    SEND_SAMPS_COUNT = 5
+    SEND_SAMPS_COUNT = 4
     FOFF = 1e4
-    TOFF = 0.3
+    TOFF = 0.2
     
     def __init__(self, servaddr, servport, radio_args = ""):
         self.pipe = None
