@@ -185,8 +185,8 @@ class MeasurementsController:
             self.cmd_waitres({'client_list': [txclient, *rxclients],
                               'timeout': cmd['timeout']})
             for res in self.last_results:
-                if not res.measurements: continue
                 print("Here!")
+                if not res.measurements: continue
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
                 dsname = "%s-%d" % (rxclient, stime)
