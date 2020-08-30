@@ -25,7 +25,7 @@ message SessionMsg {
     MsgType type = 3;
 
     // Start time for command
-    float start_time = 4;
+    double start_time = 4;
 
     // List of clients to receive a message (used controller-side).
     repeated string clients = 5;
