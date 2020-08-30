@@ -150,6 +150,7 @@ class MeasurementsController:
         clients = self._get_client_list(cmd)
         if 'client_list' in cmd:
             del cmd['client_list']
+        self.logger.info("Running path measurements over clients: %s" % clients)
         toff = cmd['toff'] if 'toff' in cmd else self.DEF_TOFF
         dfile = self._get_datafile()
         if not 'measure_paths' in dfile:
@@ -167,6 +168,7 @@ class MeasurementsController:
             rxclients = [x for x in clients if x != txclient]
             txgrp = measgrp.create_group(txclient)
             stime = rxcmd.start_time = int(time.time())
+            self.logger.info("Running with transmitter: %s" % txclient)
             txcmd.ClearField("clients")
             txcmd.clients.append(txclient)
             rxcmd.ClearField("clients")
