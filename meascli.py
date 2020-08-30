@@ -113,6 +113,7 @@ class MeasurementsClient:
                 self.TOFF
             sltime = args['start_time'] + i*args['time_step'] - time.time()
             if sltime > 0:
+                self.logger.debug("Sleeping for %f seconds" % sltime)
                 time.sleep(sltime)
             self.logger.debug("Now!")
             func(self, args, rmsg)
