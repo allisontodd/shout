@@ -179,15 +179,14 @@ class MeasurementsController:
                 ds[0] = np.array(res.measurements)
                 ds.attrs['tx'] = txclient
                 ds.attrs['rx'] = rxclient
-            now = time.time()
-            rxcmd.start_time = txcmd.start_time = np.ceil(now) + toff
-            self.logger.debug("stime: %f, now: %f, toff: %f" % (rxcmd.start_time, now, toff))
+            rxcmd.start_time = txcmd.start_time = np.ceil(time.time()) + toff
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': [txclient, *rxclients],
                               'timeout': cmd['timeout']})
             for res in self.last_results:
                 if not res.measurements: continue
+                print("Here!")
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
                 dsname = "%s-%d" % (rxclient, stime)

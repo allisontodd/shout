@@ -106,20 +106,16 @@ class MeasurementsClient:
         self.radio.tune(args['freq'], args['gain'], args['rate'])
         steps = int(np.floor(args['rate']/args['freq_step']/2))
         if not args['start_time']:
-            args['start_time'] = int(np.ceil(time.time()))
+            args['start_time'] = np.ceil(time.time())
         for i in range(1,steps):
             args['wfreq'] = i*args['freq_step']
             args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
                 self.TOFF
-            stime = args['start_time']
-            tstep = i*args['time_step']
-            now = time.time()
-            self.logger.debug("stime: %f, tstep: %f, now: %f" % (stime, tstep, now))
-            sltime = stime + tstep - now
+            sltime = args['start_time'] + i*args['time_step'] - time.time()
             if sltime > 0:
-                self.logger.debug("Sleeping for %f seconds" % sltime)
                 time.sleep(sltime)
-            self.logger.debug("Now!")
+            else:
+                self.logger.info("Late: %f" % sltime)
             func(self, args, rmsg)
 
     def run(self):
