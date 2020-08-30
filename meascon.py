@@ -74,8 +74,8 @@ class MeasurementsController:
     def _clear_start_time(self):
         self.start_time = 0
 
-    def _get_clients(self):
-        # Get list of clients
+    def _get_connected_clients(self):
+        # Get list of clients from ServerConnector
         cmsg = measpb.SessionMsg()
         cmsg.type = measpb.SessionMsg.CALL
         add_attr(cmsg, "funcname", ServerConnector.CALL_GETCLIENTS)
@@ -83,6 +83,14 @@ class MeasurementsController:
         rmsg = measpb.SessionMsg()
         rmsg.ParseFromString(self.pipe.recv())
         return rmsg.clients
+
+    def _get_client_list(self, cmd):
+        clients = None
+        if 'client_list' in cmd:
+            clients = list(cmd['client_list'])
+        if not clients or clients[0] == "all":
+            clients = self._get_connected_clients()
+        return clients
 
     def _rpc_call(self, cmd):
         self.logger.info("Running %s on: %s" % (cmd['cmd'], cmd['client_list']))
@@ -101,9 +109,7 @@ class MeasurementsController:
         time.sleep(cmd['duration'])
         
     def cmd_waitres(self, cmd):
-        clients = cmd['client_list']
-        if not clients or clients[0] == "all":
-            clients = self._get_clients()
+        clients = self._get_client_list(cmd)
         waittime = time.time() + cmd['timeout']
         self.last_results = []
         self.logger.info("Waiting for clients: %s" % clients)
@@ -120,40 +126,34 @@ class MeasurementsController:
                         break
 
     def cmd_plotpsd(self, cmd):
+        clients = self._get_client_list(cmd)
         for res in self.last_results:
-            if not res.samples: continue
             clientname = get_attr(res, 'clientname')
-            rate = float(get_attr(res, 'rate'))
-            vals = np.array([complex(c.r, c.j) for c in res.samples],
-                            dtype=np.complex64)
-            psd = compute_psd(len(vals), vals)
-            freqs = np.fft.fftshift(np.fft.fftfreq(len(vals), 1/rate))
-            plproc = mp.Process(target=plot_stuff,
-                                args=(clientname, freqs, psd))
-            plproc.start()
+            if clientname in clients and res.samples:
+                rate = float(get_attr(res, 'rate'))
+                vals = np.array([complex(c.r, c.j) for c in res.samples],
+                                dtype=np.complex64)
+                psd = compute_psd(len(vals), vals)
+                freqs = np.fft.fftshift(np.fft.fftfreq(len(vals), 1/rate))
+                plproc = mp.Process(target=plot_stuff,
+                                    args=(clientname, freqs, psd))
+                plproc.start()
         
     def cmd_printres(self, cmd):
-        doall = False
-        if 'client_list' not in cmd or cmd['client_list'][0] == "all":
-            doall = True
+        clients = self._get_client_list(cmd)
         for res in self.last_results:
             clientname = get_attr(res, 'clientname')
-            if doall or clientname in cmd['client_list']:
+            if clientname in clients:
                 print(res)
 
     def cmd_measpaths(self, cmd):
+        clients = self._get_client_list(cmd)
         toff = cmd['toff'] if 'toff' in cmd else self.DEF_TOFF
         dfile = self._get_datafile()
         if not 'measure_paths' in dfile:
             dfile.create_group('measure_paths')
         subgrp = dfile['measure_paths'].create_group("%d" % int(time.time()))
         subgrp.attrs.update(cmd)
-        clients = None
-        if "client_list" in cmd:
-            clients = cmd['client_list']
-            del cmd['client_list']
-        if not clients or clients[0] == "all":
-            clients = self._get_clients()
         cmd['gain'] = cmd['txgain']
         txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
         cmd['gain'] = cmd['rxgain']
@@ -186,7 +186,6 @@ class MeasurementsController:
             self.cmd_waitres({'client_list': rxclients + [txclient],
                               'timeout': cmd['timeout']})
             for res in self.last_results:
-                print("Here!")
                 if not res.measurements: continue
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
