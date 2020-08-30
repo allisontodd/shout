@@ -154,8 +154,8 @@ class MeasurementsController:
         dfile = self._get_datafile()
         if not 'measure_paths' in dfile:
             dfile.create_group('measure_paths')
-        subgrp = dfile['measure_paths'].create_group("%d" % int(time.time()))
-        subgrp.attrs.update(cmd)
+        measgrp = dfile['measure_paths'].create_group("%d" % int(time.time()))
+        measgrp.attrs.update(cmd)
         cmd['gain'] = cmd['txgain']
         txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
         cmd['gain'] = cmd['rxgain']
@@ -177,7 +177,7 @@ class MeasurementsController:
                 rxclient = get_attr(res, 'clientname')
                 arr = np.array(res.measurements)
                 dsname = "%s-%d" % (rxclient, stime)
-                ds = subgrp.create_dataset(dsname, (2,arr.size),
+                ds = measgrp.create_dataset(dsname, (2,arr.size),
                                            dtype=np.float32)
                 ds[0] = np.array(res.measurements)
                 ds.attrs['tx'] = txclient
@@ -192,8 +192,9 @@ class MeasurementsController:
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
                 dsname = "%s-%d" % (rxclient, stime)
-                dfile[dsname][1] = arr
-                print(arr - np.array(dfile[dsname][0]))
+                ds = measgrp[dsname]
+                ds[1] = arr
+                print(arr - np.array(ds[0]))
 
     def run(self, cmdfile):
         (c1, c2) = mp.Pipe()
