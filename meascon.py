@@ -176,12 +176,10 @@ class MeasurementsController:
             for res in self.last_results:
                 rxclient = get_attr(res, 'clientname')
                 arr = np.array(res.measurements)
-                dsname = "%s-%d" % (rxclient, stime)
-                ds = measgrp.create_dataset(dsname, (2,arr.size),
-                                           dtype=np.float32)
+                ds = measgrp.create_dataset(rxclient, (2,arr.size),
+                                            dtype=np.float32)
                 ds[0] = np.array(res.measurements)
                 ds.attrs['tx'] = txclient
-                ds.attrs['rx'] = rxclient
             rxcmd.start_time = txcmd.start_time = np.ceil(time.time()) + toff
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
@@ -191,8 +189,7 @@ class MeasurementsController:
                 if not res.measurements: continue
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
-                dsname = "%s-%d" % (rxclient, stime)
-                ds = measgrp[dsname]
+                ds = measgrp[rxclient]
                 ds[1] = arr
                 print(arr - np.array(ds[0]))
 
