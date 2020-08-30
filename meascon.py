@@ -174,8 +174,8 @@ class MeasurementsController:
                 rxclient = get_attr(res, 'clientname')
                 arr = np.array(res.measurements)
                 dsname = "%s-%d" % (rxclient, stime)
-                ds = dfile.create_dataset(dsname, (2,arr.size),
-                                          dtype=np.float32)
+                ds = subgrp.create_dataset(dsname, (2,arr.size),
+                                           dtype=np.float32)
                 ds[0] = np.array(res.measurements)
                 ds.attrs['tx'] = txclient
                 ds.attrs['rx'] = rxclient
