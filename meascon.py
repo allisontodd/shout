@@ -148,6 +148,7 @@ class MeasurementsController:
 
     def cmd_measpaths(self, cmd):
         clients = self._get_client_list(cmd)
+        del cmd['client_list'] if 'client_list' in cmd
         toff = cmd['toff'] if 'toff' in cmd else self.DEF_TOFF
         dfile = self._get_datafile()
         if not 'measure_paths' in dfile:
