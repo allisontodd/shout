@@ -17,7 +17,7 @@ from rpccalls import *
 DEF_OUTDIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
 DEF_LOGFILE="/var/tmp/mcontroller.log"
-LOGLEVEL = logging.INFO
+LOGLEVEL = logging.DEBUG
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""
@@ -162,7 +162,7 @@ class MeasurementsController:
 
         for txclient in clients:
             rxclients = [x for x in clients if x != txclient]
-            rxcmd.start_time = int(time.time())
+            stime = rxcmd.start_time = int(time.time())
             txcmd.ClearField("clients")
             txcmd.clients.append(txclient)
             rxcmd.ClearField("clients")
@@ -173,7 +173,7 @@ class MeasurementsController:
             for res in self.last_results:
                 rxclient = get_attr(res, 'clientname')
                 arr = np.array(res.measurements)
-                dsname = "%s-%d" % (rxclient, rxcmd.start_time)
+                dsname = "%s-%d" % (rxclient, stime)
                 ds = dfile.create_dataset(dsname, (2,arr.size),
                                           dtype=np.float32)
                 ds[0] = np.array(res.measurements)
@@ -188,7 +188,7 @@ class MeasurementsController:
                 if not res.measurements: continue
                 arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
-                dsname = "%s-%d" % (rxclient, rxcmd.start_time)
+                dsname = "%s-%d" % (rxclient, stime)
                 dfile[dsname][1] = arr
                 print(arr - np.array(dfile[dsname][0]))
 
