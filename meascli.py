@@ -111,7 +111,11 @@ class MeasurementsClient:
             args['wfreq'] = i*args['freq_step']
             args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
                 self.TOFF
-            sltime = args['start_time'] + i*args['time_step'] - time.time()
+            stime = args['start_time']
+            tstep = i*args['time_step']
+            now = time.time()
+            self.logger.debug("stime: %f, tstep: %f, now: %f" % (stime, tstep, now))
+            sltime = stime + tstep - now
             if sltime > 0:
                 self.logger.debug("Sleeping for %f seconds" % sltime)
                 time.sleep(sltime)
