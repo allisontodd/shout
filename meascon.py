@@ -181,7 +181,7 @@ class MeasurementsController:
                 ds.attrs['rx'] = rxclient
             now = time.time()
             rxcmd.start_time = txcmd.start_time = np.ceil(now) + toff
-            self.logger.debug("stime: %f, now: %f" % (rxcmd.start_time, now))
+            self.logger.debug("stime: %f, now: %f, toff: %f" % (rxcmd.start_time, now, toff))
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': [txclient, *rxclients],
