@@ -106,6 +106,7 @@ class MeasurementsController:
             clients = self._get_clients()
         waittime = time.time() + cmd['timeout']
         self.last_results = []
+        self.logger.info("Waiting for clients: %s" % clients)
         while time.time() < waittime and len(clients):
             if self.pipe.poll(self.POLLTIME):
                 rmsg = measpb.SessionMsg()
