@@ -184,7 +184,7 @@ class MeasurementsController:
                                           dtype=np.float32)
                 ds[0] = np.array(res.measurements)
             rxcmd.start_time = np.ceil(time.time()) + toff
-            txcmd.start_time = rxcmd.start_time - self.TX_TOFF # Start TX early.
+            txcmd.start_time = rxcmd.start_time
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': rxclients + [txclient],
