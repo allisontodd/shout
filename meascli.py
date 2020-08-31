@@ -64,7 +64,7 @@ class MeasurementsClient:
         add_attr(rmsg, "type", "reply")
         self.pipe.send(rmsg.SerializeToString())
 
-    def recv_samps(self, msg):
+    def recv_samps(self, args, rmsg):
         add_attr(rmsg, "rate", args['rate'])
         self.logger.info("Collecting %d samples." % args['nsamps'])
         self.radio.tune(args['freq'], args['gain'], args['rate'])

@@ -36,7 +36,7 @@ class Radio:
         buffer_samps = self.rxstreamer.get_max_num_samps()
         recv_buffer = np.empty((1, buffer_samps), dtype=np.complex64)
         # Loop several times and read samples to clear out gunk.
-        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.num_samps_and_done)
+        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.num_done)
         rx_stream_cmd.num_samps = buffer_samps * self.RX_CLEAR_COUNT
         rx_stream_cmd.stream_now = True
         self.rxstreamer.issue_stream_cmd(rx_stream_cmd)
@@ -72,7 +72,7 @@ class Radio:
         recv_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
 
         # Set up the device to receive exactly `nsamps` samples.
-        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.num_samps_and_done)
+        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.num_done)
         rx_stream_cmd.num_samps = nsamps
         rx_stream_cmd.stream_now = True
         self.rxstreamer.issue_stream_cmd(rx_stream_cmd)
