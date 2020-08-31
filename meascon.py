@@ -36,6 +36,7 @@ def plot_stuff(title, *args):
 class MeasurementsController:
     POLLTIME = 10
     DEF_TOFF = 2
+    TX_TOFF = 0.5
     LOGFMAT = '%(asctime)s:%(levelname)s: %(message)s'
     LOGDATEFMAT = '%Y-%m-%d %H:%M:%S'
 
@@ -182,7 +183,8 @@ class MeasurementsController:
                 ds = txgrp.create_dataset(rxclient, (2,arr.size),
                                           dtype=np.float32)
                 ds[0] = np.array(res.measurements)
-            rxcmd.start_time = txcmd.start_time = np.ceil(time.time()) + toff
+            rxcmd.start_time = np.ceil(time.time()) + toff
+            txcmd.start_time = rxcmd.start_time - self.TX_TOFF # Start TX early.
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': rxclients + [txclient],

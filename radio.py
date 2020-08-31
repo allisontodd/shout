@@ -23,15 +23,6 @@ class Radio:
         self.txstreamer = self.usrp.get_tx_stream(st_args)
         self.rxstreamer = self.usrp.get_rx_stream(st_args)
 
-    def _start_rxstreamer(self):
-        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
-        rx_stream_cmd.stream_now = True
-        self.rxstreamer.issue_stream_cmd(rx_stream_cmd)
-
-    def _stop_rxstreamer(self):
-        stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
-        self.rxstreamer.issue_stream_cmd(stream_cmd)
-
     def _stop_txstreamer(self):
         # Send a mini EOB packet
         metadata = uhd.types.TXMetadata()
@@ -39,13 +30,16 @@ class Radio:
         self.txstreamer.send(np.zeros((1, 0), dtype=np.complex64), metadata)
 
     def _flush_rxstreamer(self):
-        ### Flush the pipes. STREAMER MUST BE STARTED!
         # For collecting metadata from radio command (i.e., errors, etc.)
         metadata = uhd.types.RXMetadata()
         # Figure out the size of the receive buffer and make it
         buffer_samps = self.rxstreamer.get_max_num_samps()
-        recv_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
+        recv_buffer = np.empty((1, buffer_samps), dtype=np.complex64)
         # Loop several times and read samples to clear out gunk.
+        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.num_samps_and_done)
+        rx_stream_cmd.num_samps = buffer_samps * self.RX_CLEAR_COUNT
+        rx_stream_cmd.stream_now = True
+        self.rxstreamer.issue_stream_cmd(rx_stream_cmd)
         for i in range(self.RX_CLEAR_COUNT):
             samps = self.rxstreamer.recv(recv_buffer, metadata)
             if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
@@ -60,6 +54,7 @@ class Radio:
         if rate:
             self.usrp.set_tx_rate(rate, self.channel)
             self.usrp.set_rx_rate(rate, self.channel)
+        self._flush_rxstreamer()
 
     def recv_samples(self, nsamps, rate = None):
         # Set the sampling rate if necessary
@@ -76,9 +71,11 @@ class Radio:
         buffer_samps = self.rxstreamer.get_max_num_samps()
         recv_buffer = np.zeros((1, buffer_samps), dtype=np.complex64)
 
-        # Start and flush RX streamer:
-        self._start_rxstreamer()
-        self._flush_rxstreamer()
+        # Set up the device to receive exactly `nsamps` samples.
+        rx_stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.num_samps_and_done)
+        rx_stream_cmd.num_samps = nsamps
+        rx_stream_cmd.stream_now = True
+        self.rxstreamer.issue_stream_cmd(rx_stream_cmd)
         
         # Loop until we get the number of samples requested.  Append each
         # batch received to the return array.
@@ -94,8 +91,7 @@ class Radio:
                     recv_buffer[:, 0:real_samps]
                 recv_samps += real_samps
 
-        # Done.  Stop RX streamer and return samples.
-        self._stop_rxstreamer()
+        # Done.  Return samples.
         return samples
 
     def send_samples(self, samples, rate = None):
