@@ -8,6 +8,7 @@ import numpy as np
 
 class Radio:
     RX_CLEAR_COUNT = 1000
+    LO_ADJ = 1e6
 
     def __init__(self, usrp_args = "", chan = 0):
         self.usrp = uhd.usrp.MultiUSRP(usrp_args)
@@ -46,10 +47,12 @@ class Radio:
                 print(metadata.strerror())
         
     def tune(self, freq, gain, rate = None):
+        # Push the LO offset outside of sampling freq range
+        lo_off = rate + self.LO_ADJ
         # Set the USRP freq, gain, and rate (if provided)
-        self.usrp.set_rx_freq(uhd.types.TuneRequest(freq), self.channel)
+        self.usrp.set_rx_freq(uhd.types.TuneRequest(freq, lo_off), self.channel)
         self.usrp.set_rx_gain(gain, self.channel)
-        self.usrp.set_tx_freq(uhd.types.TuneRequest(freq), self.channel)
+        self.usrp.set_tx_freq(uhd.types.TuneRequest(freq, lo_off), self.channel)
         self.usrp.set_tx_gain(gain, self.channel)
         if rate:
             self.usrp.set_tx_rate(rate, self.channel)
