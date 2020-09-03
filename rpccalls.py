@@ -93,3 +93,14 @@ RPCCALLS['seq_transmit'] = \
                 'freq_step': {'type': float, 'default': 5e4},
                 'time_step': {'type': float, 'default': 1},
             })
+
+RPCCALLS['seq_rxsamples'] = \
+    RPCCall('seq_rxsamples',
+            {
+                'nsamps':    {'type': int, 'default': 256},
+                'freq':      {'type': float, 'default': None},
+                'gain':      {'type': float, 'default': 30.0},
+                'rate':      {'type': float, 'default': 1e6},
+                'freq_step': {'type': float, 'default': 5e4},
+                'time_step': {'type': float, 'default': 1},
+            })

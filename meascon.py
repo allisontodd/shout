@@ -7,31 +7,17 @@ import logging
 import json
 import multiprocessing as mp
 import numpy as np
-import matplotlib.pyplot as plt
 import h5py
 
 import measurements_pb2 as measpb
 from serverconnector import ServerConnector
 from rpccalls import *
+from sigutils import *
 
 DEF_OUTDIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
 DEF_LOGFILE="/var/tmp/mcontroller.log"
 LOGLEVEL = logging.DEBUG
-
-def compute_psd(nfft, samples):
-    """Return the power spectral density of `samples`"""
-    window = np.hamming(nfft)
-    result = np.multiply(window, samples)
-    result = np.fft.fftshift(np.fft.fft(result, nfft))
-    result = np.square(np.abs(result))
-    result = np.nan_to_num(10.0 * np.log10(result))
-    return result
-
-def plot_stuff(title, *args):
-    plt.suptitle("Client: %s" % title)
-    plt.plot(*args)
-    plt.show()
 
 class MeasurementsController:
     POLLTIME = 10
@@ -151,6 +137,8 @@ class MeasurementsController:
         clients = self._get_client_list(cmd)
         if 'client_list' in cmd:
             del cmd['client_list']
+        if not 'get_samples' in cmd:
+            cmd['get_samples'] = False
         self.logger.info("Running path measurements over clients: %s" % clients)
         toff = cmd['toff'] if 'toff' in cmd else self.DEF_TOFF
         dfile = self._get_datafile()
@@ -161,7 +149,8 @@ class MeasurementsController:
         cmd['gain'] = cmd['txgain']
         txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
         cmd['gain'] = cmd['rxgain']
-        rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
+        call = 'seq_rxsamples' if cmd['get_samples'] else 'seq_measure'
+        rxcmd = RPCCALLS[call].encode(**cmd)
         del cmd['gain']
         del cmd['cmd']
 
@@ -179,10 +168,15 @@ class MeasurementsController:
                               'timeout': cmd['timeout']})
             for res in self.last_results:
                 rxclient = get_attr(res, 'clientname')
-                arr = np.array(res.measurements)
+                arr = None
+                if cmd['get_samples']:
+                    arr = np.array([complex(c.r, c.j) for c in res.samples],
+                                   dtype=np.complex64)
+                else:
+                    arr = np.array(res.measurements, dtype=np.float32)
                 ds = txgrp.create_dataset(rxclient, (2,arr.size),
-                                          dtype=np.float32)
-                ds[0] = np.array(res.measurements)
+                                              dtype=arr.dtype)
+                ds[0] = arr
             rxcmd.start_time = np.ceil(time.time()) + toff
             txcmd.start_time = rxcmd.start_time
             self.pipe.send(txcmd.SerializeToString())
@@ -190,12 +184,17 @@ class MeasurementsController:
             self.cmd_waitres({'client_list': rxclients + [txclient],
                               'timeout': cmd['timeout']})
             for res in self.last_results:
-                if not res.measurements: continue
-                arr = np.array(res.measurements)
                 rxclient = get_attr(res, 'clientname')
+                arr = None
+                if cmd['get_samples']:
+                    if not res.samples: continue
+                    arr = np.array([complex(c.r, c.j) for c in res.samples],
+                                   dtype=np.complex64)
+                else:
+                    if not res.measurements: continue
+                    arr = np.array(res.measurements, dtype=np.float32)
                 ds = txgrp[rxclient]
                 ds[1] = arr
-                print(arr - np.array(ds[0]))
 
     def run(self, cmdfile):
         (c1, c2) = mp.Pipe()

@@ -12,6 +12,7 @@ import daemon
 import argparse
 
 from rpccalls import *
+from sigutils import *
 import measurements_pb2 as measpb
 from clientconnector import ClientConnector
 from radio import Radio
@@ -20,18 +21,6 @@ LOGFILE="/var/tmp/ccontroller.log"
 DEF_IP = "127.0.0.1"
 DEF_PORT = 5555
 DEF_LOGLEVEL = logging.DEBUG
-
-def mk_sine(nsamps, wampl, wfreq, srate):
-    vals = np.ones((1,nsamps), dtype=np.complex64) * np.arange(nsamps)
-    return wampl * np.exp(vals * 2j * np.pi * wfreq/srate)
-
-def butter_filt(samps, flo, fhi, srate, order = 5):
-    nyq = 0.5*srate
-    b, a = sig.butter(order, [flo/nyq, fhi/nyq], btype='band')
-    return sig.lfilter(b, a, samps)
-
-def get_avg_power(samps):
-    return np.sum(np.abs(samps))/len(samps)
 
 class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
@@ -68,10 +57,7 @@ class MeasurementsClient:
         add_attr(rmsg, "rate", args['rate'])
         self.logger.info("Collecting %d samples." % args['nsamps'])
         self.radio.tune(args['freq'], args['gain'], args['rate'])
-        samples = self.radio.recv_samples(args['nsamps'])
-        for samp in samples[0]:
-            msamp = rmsg.samples.add()
-            msamp.r, msamp.j = samp.real, samp.imag
+        self._do_recv_samps(args, rmsg)
 
     def xmit_sine(self, args, rmsg):
         self.logger.info("Sending sine wave with freq %f" % args['wfreq'])
@@ -83,6 +69,12 @@ class MeasurementsClient:
     def meas_power(self, args, rmsg):
         self.radio.tune(args['freq'], args['gain'], args['rate'])
         self._do_meas_power(args, rmsg)
+
+    def _do_recv_samps(self, args, rmsg):
+        samples = self.radio.recv_samples(args['nsamps'])
+        for samp in samples[0]:
+            msamp = rmsg.samples.add()
+            msamp.r, msamp.j = samp.real, samp.imag
 
     def _do_meas_power(self, args, rmsg):
         flo, fhi = args['wfreq']-self.FOFF, args['wfreq']+self.FOFF
@@ -147,6 +139,7 @@ class MeasurementsClient:
         "rxsamples": recv_samps,
         "txsine": xmit_sine,
         "measure_power": meas_power,
+        "seq_rxsamples": _do_recv_samps,
         "seq_measure":  _do_meas_power,
         "seq_transmit": _do_xmit,
     }
