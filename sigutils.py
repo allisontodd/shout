@@ -2,7 +2,7 @@
 
 import numpy as np
 import scipy.signal as sig
-import matplotlib.pyploy as plt
+import matplotlib.pyplot as plt
 
 def mk_sine(nsamps, wampl, wfreq, srate):
     vals = np.ones((1,nsamps), dtype=np.complex64) * np.arange(nsamps)
