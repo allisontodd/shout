@@ -51,7 +51,7 @@ def parse_args():
     parser.add_argument("-f", "--dfname", type=str, default=DEF_DFNAME)
     parser.add_argument("-l", "--listds", action="store_true")
     parser.add_argument("-m", "--measdiff", action="store_true")
-    parser.add_argument("-t", "--runstamp", type=int, default=0)
+    parser.add_argument("-t", "--runstamp", type=str, default=0)
     return parser.parse_args()
 
 if __name__ == "__main__":
