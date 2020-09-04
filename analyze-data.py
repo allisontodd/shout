@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-from sigutils import *
+import argparse
 
 import numpy as np
 import scipy.signal as sig
 import h5py
+
+from sigutils import *
 
 DEF_OUTDIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
