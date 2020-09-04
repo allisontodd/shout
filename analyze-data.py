@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument("-l", "--listds", action="store_true")
     parser.add_argument("-m", "--measdiff", action="store_true")
     parser.add_argument("-t", "--runstamp", type=str, default=0)
-    parser.add_argument("-b", "--filtbw", type=int, default=DEF_FILTBW)
+    parser.add_argument("-b", "--filtbw", type=float, default=DEF_FILTBW)
     return parser.parse_args()
 
 if __name__ == "__main__":
