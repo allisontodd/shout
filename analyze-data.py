@@ -14,7 +14,7 @@ DEF_DFNAME="measurements.hdf5"
 MEAS_ROOT="measure_paths"
 DEF_FILTBW = 1e5
 
-def get_powerdiffs(attrs, rxds, filtbw):
+def get_powerdiffs(attrs, ds, filtbw):
     rate = attrs['rate']
     fstep = attrs['freq_step']
     steps = int(np.floor(rate/fstep/2))
@@ -22,26 +22,24 @@ def get_powerdiffs(attrs, rxds, filtbw):
     foff = filtbw/2
     pwrs = []
     for i in range(1,steps):
-        rsamps = rxds[0][(i-1)*nsamps:i*nsamps]
-        tsamps = rxds[1][(i-1)*nsamps:i*nsamps]
-        rsamps = butter_filt(rsamps, i*fstep - foff,
-                             i*fstep + foff, rate)
-        tsamps = butter_filt(tsamps, i*fstep - foff,
-                             i*fstep + foff, rate)
-        pwr = [get_avg_power(s) for s in (rsamps, tsamps)]
-        pwrs.append(pwr[1] - pwr[0])
+        bsamps = np.array(ds[0][(i-1)*nsamps:i*nsamps])
+        tsamps = np.array(ds[1][(i-1)*nsamps:i*nsamps])
+        fbsamps = butter_filt(bsamps, i*fstep - foff,
+                              i*fstep + foff, rate)
+        ftsamps = butter_filt(tsamps, i*fstep - foff,
+                              i*fstep + foff, rate)
+        pwrs.append(get_avg_power(ftsamps) - get_avg_power(fbsamps))
     return pwrs
 
-def do_plots(attrs, name, ds):
+def do_plots(attrs, name, allsamps):
     rate = attrs['rate']
     fstep = attrs['freq_step']
     steps = int(np.floor(rate/fstep/2))
     nsamps = attrs['nsamps']
     for i in range(1,steps):
-        tsamps = ds[1][(i-1)*nsamps:i*nsamps]
+        tsamps = allsamps[(i-1)*nsamps:i*nsamps]
         psd = compute_psd(nsamps, tsamps)
         freqs = np.fft.fftshift(np.fft.fftfreq(nsamps, 1/rate))
-        fstep = attrs['freq_step']
         title = "%s-%f" % (name, i*fstep)
         plproc = mp.Process(target=plot_stuff,
                             args=(title, freqs, psd))
@@ -76,8 +74,8 @@ def main(args):
 
     if args.plotpsd:
         run = dsfile[MEAS_ROOT][args.runstamp]
-        ds = run[args.txname][args.rxname]
-        do_plots(run.attrs, args.rxname, ds)
+        samps = run[args.txname][args.rxname][1]
+        do_plots(run.attrs, args.rxname, samps)
 
 def parse_args():
     """Parse the command line arguments"""
