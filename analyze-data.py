@@ -32,6 +32,21 @@ def get_powerdiffs(attrs, rxds, filtbw):
         pwrs.append(pwr[1] - pwr[0])
     return pwrs
 
+def do_plots(attrs, name, ds):
+    rate = attrs['rate']
+    fstep = attrs['freq_step']
+    steps = int(np.floor(rate/fstep/2))
+    nsamps = run.attrs['nsamps']
+    for i in range(1,steps):
+        tsamps = ds[1][(i-1)*nsamps:i*nsamps]
+        psd = compute_psd(nsamps, tsamps)
+        freqs = np.fft.fftshift(np.fft.fftfreq(nsamps, 1/rate))
+        fstep = attrs['freq_step']
+        title = "%s-%f" % (name, i*fstep)
+        plproc = mp.Process(target=plot_stuff,
+                            args=(title, freqs, psd))
+        plproc.start()
+
 def main(args):
     dsfile = h5py.File("%s/%s" % (args.datadir, args.dfname), "r")
     if args.listds:
@@ -61,19 +76,8 @@ def main(args):
 
     if args.plotpsd:
         run = dsfile[MEAS_ROOT][args.runstamp]
-        rate = run.attrs['rate']
-        for txname, txgrp in run.items():
-            for rxname, rxds in txgrp.items():
-                fstep = run.attrs['freq_step']
-                steps = int(np.floor(rate/fstep/2))
-                nsamps = run.attrs['nsamps']
-                for i in range(1,steps):
-                    tsamps = rxds[1][(i-1)*nsamps:i*nsamps]
-                    psd = compute_psd(nsamps, tsamps)
-                    freqs = np.fft.fftshift(np.fft.fftfreq(nsamps, 1/rate))
-                    plproc = mp.Process(target=plot_stuff,
-                                        args=(rxname, freqs, psd))
-                    plproc.start()
+        ds = run[args.txname][args.rxname]
+        do_plots(run.attrs, rxds)
 
 def parse_args():
     """Parse the command line arguments"""
