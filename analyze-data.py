@@ -36,7 +36,7 @@ def do_plots(attrs, name, ds):
     rate = attrs['rate']
     fstep = attrs['freq_step']
     steps = int(np.floor(rate/fstep/2))
-    nsamps = run.attrs['nsamps']
+    nsamps = attrs['nsamps']
     for i in range(1,steps):
         tsamps = ds[1][(i-1)*nsamps:i*nsamps]
         psd = compute_psd(nsamps, tsamps)
