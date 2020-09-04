@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from sigtools import *
+from sigutils import *
 
 import numpy as np
 import scipy.signal as sig
