@@ -23,7 +23,7 @@ DEF_PORT = 5555
 DEF_LOGLEVEL = logging.DEBUG
 
 class MeasurementsClient:
-    XMIT_SAMPS_MIN = 1000000
+    XMIT_SAMPS_MIN = 500000
     TOFF = 0.5
     
     def __init__(self, servaddr, servport, radio_args = ""):
