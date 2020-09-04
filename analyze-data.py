@@ -22,15 +22,15 @@ def main(args):
             run = dsfile[MEAS_ROOT][args.runstamp]
             rate = run.attrs['rate']
             if run.attrs['get_samples']:
-                for tx in run.keys():
-                    for rx in tx.keys():
+                for txname, txgrp in run.times():
+                    for rxname, rxds in txgrp.items():
                         fstep = run.attrs['freq_step']
                         steps = int(np.floor(rate/fstep/2))
                         nsamps = run.attrs['nsamps']
                         pwrs = []
                         for i in range(1,steps):
-                            rsamps = rx[0][(i-1)*nsamps:i*nsamps]
-                            tsamps = rx[1][(i-1)*nsamps:i*nsamps]
+                            rsamps = rxds[0][(i-1)*nsamps:i*nsamps]
+                            tsamps = rxds[1][(i-1)*nsamps:i*nsamps]
                             rsamps = butter_filt(rsamps, i*fstep - FOFF,
                                                  i*fstep + FOFF, rate)
                             tsamps = butter_filt(tsamps, i*fstep - FOFF,
@@ -39,9 +39,9 @@ def main(args):
                             pwrs.append(pwr[1] - pwr[0])
                         print(pwrs)
             else:
-                for tx in run.keys():
-                    for rx in tx.keys():
-                        print(rx[1]-rx[0])
+                for txname, txgrp in run.items():
+                    for rxname, rxds in txgrp.items():
+                        print(rxds[1]-rxds[0])
 
 
 def parse_args():
