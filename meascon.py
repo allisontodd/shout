@@ -178,7 +178,7 @@ class MeasurementsController:
                                               dtype=arr.dtype)
                 ds[0] = arr
             rxcmd.start_time = np.ceil(time.time()) + toff
-            txcmd.start_time = rxcmd.start_time
+            txcmd.start_time = rxcmd.start_time - self.TX_TOFF
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': rxclients + [txclient],
