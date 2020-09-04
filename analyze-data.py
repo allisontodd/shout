@@ -47,13 +47,13 @@ def main(args):
                     print(pwrs)
                 else:
                     for rxname, rxds in txgrp.items():
-                        rxds = txgrp[rxname]
                         pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
                         print(pwrs)
-            for txname, txgrp in run.items():
-                for rxname, rxds in txgrp.items():
-                    pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
-                    print(pwrs)
+            else:
+                for txname, txgrp in run.items():
+                    for rxname, rxds in txgrp.items():
+                        pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
+                        print(pwrs)
         else:
             for txname, txgrp in run.items():
                 for rxname, rxds in txgrp.items():
