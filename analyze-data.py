@@ -77,7 +77,7 @@ def main(args):
     if args.plotpsd:
         run = dsfile[MEAS_ROOT][args.runstamp]
         ds = run[args.txname][args.rxname]
-        do_plots(run.attrs, rxds)
+        do_plots(run.attrs, args.rxname, ds)
 
 def parse_args():
     """Parse the command line arguments"""
