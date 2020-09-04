@@ -25,7 +25,6 @@ DEF_LOGLEVEL = logging.DEBUG
 class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
     SEND_SAMPS_COUNT = 5
-    FOFF = 1e3
     TOFF = 0.4
     
     def __init__(self, servaddr, servport, radio_args = ""):
@@ -77,7 +76,8 @@ class MeasurementsClient:
             msamp.r, msamp.j = samp.real, samp.imag
 
     def _do_meas_power(self, args, rmsg):
-        flo, fhi = args['wfreq']-self.FOFF, args['wfreq']+self.FOFF
+        foff = args['filter_bw']/2
+        flo, fhi = args['wfreq']-foff, args['wfreq']+foff
         #self.logger.info("Sampling power between %f and %f" %
         #                 (args['freq'] + flo, args['freq'] + fhi))
         samps = self.radio.recv_samples(args['nsamps'])

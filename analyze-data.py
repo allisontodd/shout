@@ -11,7 +11,7 @@ from sigutils import *
 DEF_OUTDIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
 MEAS_ROOT="measure_paths"
-FOFF = 1e4
+DEF_FILTBW = 1e5
 
 def main(args):
     dsfile = h5py.File("%s/%s" % (args.datadir, args.dfname), "r")
@@ -28,13 +28,14 @@ def main(args):
                         steps = int(np.floor(rate/fstep/2))
                         nsamps = run.attrs['nsamps']
                         pwrs = []
+                        foff = args.filtbw/2
                         for i in range(1,steps):
                             rsamps = rxds[0][(i-1)*nsamps:i*nsamps]
                             tsamps = rxds[1][(i-1)*nsamps:i*nsamps]
-                            rsamps = butter_filt(rsamps, i*fstep - FOFF,
-                                                 i*fstep + FOFF, rate)
-                            tsamps = butter_filt(tsamps, i*fstep - FOFF,
-                                                 i*fstep + FOFF, rate)
+                            rsamps = butter_filt(rsamps, i*fstep - foff,
+                                                 i*fstep + foff, rate)
+                            tsamps = butter_filt(tsamps, i*fstep - foff,
+                                                 i*fstep + foff, rate)
                             pwr = [get_avg_power(s) for s in (rsamps, tsamps)]
                             pwrs.append(pwr[1] - pwr[0])
                         print(pwrs)
@@ -52,6 +53,7 @@ def parse_args():
     parser.add_argument("-l", "--listds", action="store_true")
     parser.add_argument("-m", "--measdiff", action="store_true")
     parser.add_argument("-t", "--runstamp", type=str, default=0)
+    parser.add_argument("-b", "--filtbw", type=int, default=DEF_FILTBW)
     return parser.parse_args()
 
 if __name__ == "__main__":
