@@ -22,7 +22,7 @@ def main(args):
             run = dsfile[MEAS_ROOT][args.runstamp]
             rate = run.attrs['rate']
             if run.attrs['get_samples']:
-                for txname, txgrp in run.times():
+                for txname, txgrp in run.items():
                     for rxname, rxds in txgrp.items():
                         fstep = run.attrs['freq_step']
                         steps = int(np.floor(rate/fstep/2))
