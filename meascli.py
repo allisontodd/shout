@@ -23,8 +23,7 @@ DEF_PORT = 5555
 DEF_LOGLEVEL = logging.DEBUG
 
 class MeasurementsClient:
-    XMIT_SAMPS_MIN = 100000
-    SEND_SAMPS_COUNT = 5
+    XMIT_SAMPS_MIN = 1000000
     TOFF = 0.5
     
     def __init__(self, servaddr, servport, radio_args = ""):
@@ -85,13 +84,12 @@ class MeasurementsClient:
         rmsg.measurements.append(get_avg_power(fsamps))
 
     def _do_xmit(self, args, rmsg):
-        nsamps = np.floor(args['rate']/args['wfreq'])
-        nsamps *= np.ceil(self.XMIT_SAMPS_MIN/nsamps)
+        ratio = args['rate']/args['wfreq']
+        nsamps = ratio * np.ceil(self.XMIT_SAMPS_MIN/ratio)
         sinebuf = mk_sine(int(nsamps), args['wampl'], args['wfreq'],
                           args['rate'])
         while time.time() < args['end_time']:
-            for i in range(self.SEND_SAMPS_COUNT):
-                self.radio.send_samples(sinebuf)
+            self.radio.send_samples(sinebuf)
 
     def _do_seq(self, args, rmsg, func):
         self.logger.info("Performing radio command sequence...")
