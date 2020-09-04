@@ -25,7 +25,7 @@ DEF_LOGLEVEL = logging.DEBUG
 class MeasurementsClient:
     XMIT_SAMPS_MIN = 100000
     SEND_SAMPS_COUNT = 5
-    TOFF = 0.4
+    TOFF = 0.5
     
     def __init__(self, servaddr, servport, radio_args = ""):
         self.pipe = None
