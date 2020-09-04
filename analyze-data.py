@@ -38,7 +38,6 @@ def main(args):
         dsfile.visit(print)
     if args.measdiff:
         run = dsfile[MEAS_ROOT][args.runstamp]
-        rate = run.attrs['rate']
         if run.attrs['get_samples']:
             if args.txname:
                 txgrp = run[args.txname]
@@ -48,7 +47,7 @@ def main(args):
                     print(pwrs)
                 else:
                     for rxname, rxds in txgrp.items():
-                        rxds = txgrp[args.rxname]
+                        rxds = txgrp[rxname]
                         pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
                         print(pwrs)
             for txname, txgrp in run.items():
