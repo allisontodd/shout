@@ -52,7 +52,7 @@ def main(args):
 
     elif args.measdiff:
         run = dsfile[MEAS_ROOT][args.runstamp]
-        if args.use_samps and run.attrs['get_samples']:
+        if args.usesamps and run.attrs['get_samples']:
             print("Computing avg power from samples.")
             if args.txname:
                 txgrp = run[args.txname]
