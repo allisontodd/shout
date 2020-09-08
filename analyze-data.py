@@ -12,7 +12,7 @@ from sigutils import *
 DEF_OUTDIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
 MEAS_ROOT="measure_paths"
-DEF_FILTBW = 1e5
+DEF_FILTBW = 1e4
 
 def get_powerdiffs(attrs, ds, filtbw):
     rate = attrs['rate']

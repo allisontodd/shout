@@ -80,7 +80,7 @@ class MeasurementsClient:
         #self.logger.info("Sampling power between %f and %f" %
         #                 (args['freq'] + flo, args['freq'] + fhi))
         samps = self.radio.recv_samples(args['nsamps'])
-        fsamps = butter_filt(samps, flo, fhi, args['rate'])
+        fsamps = butter_filt(samps[0], flo, fhi, args['rate'])
         rmsg.measurements.append(get_avg_power(fsamps))
         if args['get_samples']:
             for samp in samps[0]:
