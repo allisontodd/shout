@@ -32,8 +32,8 @@ message SessionMsg {
     
     // Efficient storage of complex samples.
     message Complex {
-	float r = 1;
-	float j = 2;
+	double r = 1;
+	double j = 2;
     }
     repeated Complex samples = 6;
 

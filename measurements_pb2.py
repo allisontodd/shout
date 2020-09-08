@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12measurements.proto\x12\x0cmeasurements\"\xfd\x02\n\nSessionMsg\x12\x0b\n\x03sid\x18\x01 \x01(\x05\x12\x0c\n\x04uuid\x18\x02 \x01(\x05\x12.\n\x04type\x18\x03 \x01(\x0e\x32 .measurements.SessionMsg.MsgType\x12\x12\n\nstart_time\x18\x04 \x01(\x01\x12\x0f\n\x07\x63lients\x18\x05 \x03(\t\x12\x31\n\x07samples\x18\x06 \x03(\x0b\x32 .measurements.SessionMsg.Complex\x12\x14\n\x0cmeasurements\x18\x07 \x03(\x02\x12\x33\n\nattributes\x18\x08 \x03(\x0b\x32\x1f.measurements.SessionMsg.KeyVal\x1a\x1f\n\x07\x43omplex\x12\t\n\x01r\x18\x01 \x01(\x02\x12\t\n\x01j\x18\x02 \x01(\x02\x1a\"\n\x06KeyVal\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0b\n\x03val\x18\x02 \x01(\t\"<\n\x07MsgType\x12\x08\n\x04INIT\x10\x00\x12\t\n\x05\x43LOSE\x10\x01\x12\x08\n\x04\x43\x41LL\x10\x02\x12\n\n\x06RESULT\x10\x03\x12\x06\n\x02HB\x10\x04\x62\x06proto3'
+  serialized_pb=b'\n\x12measurements.proto\x12\x0cmeasurements\"\xfd\x02\n\nSessionMsg\x12\x0b\n\x03sid\x18\x01 \x01(\x05\x12\x0c\n\x04uuid\x18\x02 \x01(\x05\x12.\n\x04type\x18\x03 \x01(\x0e\x32 .measurements.SessionMsg.MsgType\x12\x12\n\nstart_time\x18\x04 \x01(\x01\x12\x0f\n\x07\x63lients\x18\x05 \x03(\t\x12\x31\n\x07samples\x18\x06 \x03(\x0b\x32 .measurements.SessionMsg.Complex\x12\x14\n\x0cmeasurements\x18\x07 \x03(\x02\x12\x33\n\nattributes\x18\x08 \x03(\x0b\x32\x1f.measurements.SessionMsg.KeyVal\x1a\x1f\n\x07\x43omplex\x12\t\n\x01r\x18\x01 \x01(\x01\x12\t\n\x01j\x18\x02 \x01(\x01\x1a\"\n\x06KeyVal\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0b\n\x03val\x18\x02 \x01(\t\"<\n\x07MsgType\x12\x08\n\x04INIT\x10\x00\x12\t\n\x05\x43LOSE\x10\x01\x12\x08\n\x04\x43\x41LL\x10\x02\x12\n\n\x06RESULT\x10\x03\x12\x06\n\x02HB\x10\x04\x62\x06proto3'
 )
 
 
@@ -75,14 +75,14 @@ _SESSIONMSG_COMPLEX = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='r', full_name='measurements.SessionMsg.Complex.r', index=0,
-      number=1, type=2, cpp_type=6, label=1,
+      number=1, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
       name='j', full_name='measurements.SessionMsg.Complex.j', index=1,
-      number=2, type=2, cpp_type=6, label=1,
+      number=2, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
