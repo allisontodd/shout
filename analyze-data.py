@@ -49,32 +49,37 @@ def main(args):
     dsfile = h5py.File("%s/%s" % (args.datadir, args.dfname), "r")
     if args.listds:
         dsfile.visit(print)
-    if args.measdiff:
+
+    elif args.measdiff:
         run = dsfile[MEAS_ROOT][args.runstamp]
-        if run.attrs['get_samples']:
+        if args.use_samps and run.attrs['get_samples']:
+            print("Computing avg power from samples.")
             if args.txname:
                 txgrp = run[args.txname]
                 if args.rxname:
-                    rxds = txgrp[args.rxname]
+                    rxds = txgrp[args.rxname]['samples']
                     pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
                     print(pwrs)
                 else:
-                    for rxname, rxds in txgrp.items():
-                        pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
+                    for rxname, rxgrp in txgrp.items():
+                        pwrs = get_powerdiffs(run.attrs, rxgrp['samples'],
+                                              args.filtbw)
                         print(pwrs)
             else:
                 for txname, txgrp in run.items():
-                    for rxname, rxds in txgrp.items():
-                        pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
+                    for rxname, rxgrp in txgrp.items():
+                        pwrs = get_powerdiffs(run.attrs, rxgrp['samples'],
+                                              args.filtbw)
                         print(pwrs)
         else:
+            print("Printing stored average power values.")
             for txname, txgrp in run.items():
-                for rxname, rxds in txgrp.items():
-                    print(rxds[1]-rxds[0])
+                for rxname, rxgrp in txgrp.items():
+                    print(rxgrp['avgpower'][1] - rxgrp['avgpower'][0])
 
-    if args.plotpsd:
+    elif args.plotpsd:
         run = dsfile[MEAS_ROOT][args.runstamp]
-        samps = run[args.txname][args.rxname][1]
+        samps = run[args.txname][args.rxname]['samples'][1]
         do_plots(run.attrs, args.rxname, samps)
 
 def parse_args():
@@ -89,6 +94,7 @@ def parse_args():
     parser.add_argument("-p", "--plotpsd", action="store_true")
     parser.add_argument("-t", "--runstamp", type=str, default=0)
     parser.add_argument("-b", "--filtbw", type=float, default=DEF_FILTBW)
+    parser.add_argument("-s", "--usesamps", action="store_true")
     return parser.parse_args()
 
 if __name__ == "__main__":
