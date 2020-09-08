@@ -176,8 +176,8 @@ class MeasurementsController:
                     ds[0] = arr
                 if res.measurements:
                     arr = np.array(res.measurements, dtype=np.float32)
-                    ds = txgrp.create_dataset('avgpower', (2,arr.size),
-                                              dtype=arr.dtype)
+                    ds = sgrp.create_dataset('avgpower', (2,arr.size),
+                                             dtype=arr.dtype)
                     ds[0] = arr
             rxcmd.start_time = np.ceil(time.time()) + toff
             txcmd.start_time = rxcmd.start_time - self.TX_TOFF
