@@ -82,6 +82,10 @@ class MeasurementsClient:
         samps = self.radio.recv_samples(args['nsamps'])
         fsamps = butter_filt(samps, flo, fhi, args['rate'])
         rmsg.measurements.append(get_avg_power(fsamps))
+        if args['get_samples']:
+            for samp in samps[0]:
+                msamp = rmsg.samples.add()
+                msamp.r, msamp.j = samp.real, samp.imag
 
     def _do_xmit(self, args, rmsg):
         ratio = args['rate']/args['wfreq']

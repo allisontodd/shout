@@ -77,6 +77,7 @@ RPCCALLS['seq_measure'] = \
     RPCCall('seq_measure',
             {
                 'nsamps':    {'type': int, 'default': 256},
+                'get_samples': {'type': bool, 'default': False},
                 'filter_bw': {'type': float, 'default': 1e4},
                 'freq':      {'type': float, 'default': None},
                 'gain':      {'type': float, 'default': 30.0},

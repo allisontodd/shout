@@ -149,8 +149,7 @@ class MeasurementsController:
         cmd['gain'] = cmd['txgain']
         txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
         cmd['gain'] = cmd['rxgain']
-        call = 'seq_rxsamples' if cmd['get_samples'] else 'seq_measure'
-        rxcmd = RPCCALLS[call].encode(**cmd)
+        rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
         del cmd['gain']
         del cmd['cmd']
 
@@ -168,15 +167,18 @@ class MeasurementsController:
                               'timeout': cmd['timeout']})
             for res in self.last_results:
                 rxclient = get_attr(res, 'clientname')
-                arr = None
-                if cmd['get_samples']:
+                sgrp = txgrp.create_group(rxclient)
+                if res.samples:
                     arr = np.array([complex(c.r, c.j) for c in res.samples],
                                    dtype=np.complex64)
-                else:
+                    ds = sgrp.create_dataset('samples', (2,arr.size),
+                                             dtype=arr.dtype)
+                    ds[0] = arr
+                if res.measurements:
                     arr = np.array(res.measurements, dtype=np.float32)
-                ds = txgrp.create_dataset(rxclient, (2,arr.size),
+                    ds = txgrp.create_dataset('avgpower', (2,arr.size),
                                               dtype=arr.dtype)
-                ds[0] = arr
+                    ds[0] = arr
             rxcmd.start_time = np.ceil(time.time()) + toff
             txcmd.start_time = rxcmd.start_time - self.TX_TOFF
             self.pipe.send(txcmd.SerializeToString())
@@ -185,16 +187,13 @@ class MeasurementsController:
                               'timeout': cmd['timeout']})
             for res in self.last_results:
                 rxclient = get_attr(res, 'clientname')
-                arr = None
-                if cmd['get_samples']:
-                    if not res.samples: continue
+                if res.samples:
                     arr = np.array([complex(c.r, c.j) for c in res.samples],
                                    dtype=np.complex64)
-                else:
-                    if not res.measurements: continue
+                    ds = txgrp[rxclient]['samples'][1] = arr
+                if res.measurements:
                     arr = np.array(res.measurements, dtype=np.float32)
-                ds = txgrp[rxclient]
-                ds[1] = arr
+                    ds = txgrp[rxclient]['avgpower'][1] = arr
 
     def run(self, cmdfile):
         (c1, c2) = mp.Pipe()
