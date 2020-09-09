@@ -128,6 +128,6 @@ class Radio:
             tx_samps += self.txstreamer.send(tx_buffer, meta)
         if self.txstreamer.recv_async_msg(as_meta, self.ASYNC_WAIT):
             if as_meta.event_code != uhd.types.TXMetadataEventCode.burst_ack:
-                self.logger.info("Async error code: %s", as_meta.event_code)
+                self.logger.debug("Async error code: %s", as_meta.event_code)
         else:
             self.logger.info("Timed out waiting for TX async.")
