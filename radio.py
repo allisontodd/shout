@@ -124,7 +124,7 @@ class Radio:
             if nsamps < max_tx_samps:
                 tx_buffer[:, nsamps:] = 0. + 0.j
             tx_samps += self.txstreamer.send(tx_buffer, meta)
-            if self.txstreamer.recv_async_msg(as_meta, self.ASYNC_WAIT):
-                self.logger.debug("Async code: %s", as_meta.event_code)
-            else:
-                self.logger.debug("Timed out waiting for async.")
+        if self.txstreamer.recv_async_msg(as_meta, self.ASYNC_WAIT):
+            self.logger.debug("Async code: %s", as_meta.event_code)
+        else:
+            self.logger.debug("Timed out waiting for async.")
