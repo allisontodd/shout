@@ -15,7 +15,7 @@ class Radio:
         self.usrp = uhd.usrp.MultiUSRP(usrp_args)
         self.channel = chan
         if rx_txrx:
-            usrp.set_rx_antenna("TX/RX")
+            self.usrp.set_rx_antenna("TX/RX")
         self.rxstreamer = None
         self.txstreamer = None
         self.logger = logger
