@@ -11,9 +11,11 @@ class Radio:
     RX_CLEAR_COUNT = 1000
     LO_ADJ = 1e6
 
-    def __init__(self, logger, usrp_args = "", chan = 0):
+    def __init__(self, logger, usrp_args = "", rx_txrx = False, chan = 0):
         self.usrp = uhd.usrp.MultiUSRP(usrp_args)
         self.channel = chan
+        if rx_txrx:
+            usrp.set_rx_antenna("TX/RX")
         self.rxstreamer = None
         self.txstreamer = None
         self.logger = logger

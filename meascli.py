@@ -26,12 +26,12 @@ class MeasurementsClient:
     XMIT_SAMPS_MIN = 500000
     TOFF = 0.5
     
-    def __init__(self, servaddr, servport, radio_args = ""):
+    def __init__(self, servaddr, servport, device_args = "", rx_txrx = False):
         self.pipe = None
         self.conproc = None
         self.logger = None
         self.setup_logger()
-        self.radio = Radio(self.logger, radio_args)
+        self.radio = Radio(self.logger, device_args, rx_txrx)
         self.connector = ClientConnector(servaddr, servport)
 
     def setup_logger(self):
@@ -151,16 +151,17 @@ def parse_args():
     """Parse the command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--args", help="USRP radio arguments", default="", type=str)
+    parser.add_argument("-t", "--usetxrx", help="Receive using the TX/RX port", action="store_true")
     parser.add_argument("-s", "--host", help="Orchestrator host to connect to", default=DEF_IP, type=str)
     parser.add_argument("-p", "--port", help="Orchestrator port", default=DEF_PORT, type=int)
-    parser.add_argument("-f", "--foreground", help="Run in foreground (don't daemonize)", action="store_true")
+    parser.add_argument("-d", "--daemon", help="Run as daemon", action="store_true")
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    if not args.foreground:
+    if args.daemon:
         # Daemonize
         dcxt = daemon.DaemonContext(umask=0o022)
         dcxt.open()
-    meascli = MeasurementsClient(args.host, args.port, args.args)
+    meascli = MeasurementsClient(args.host, args.port, args.args, args.usrtxrx)
     meascli.run()
