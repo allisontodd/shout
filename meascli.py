@@ -163,5 +163,5 @@ if __name__ == "__main__":
         # Daemonize
         dcxt = daemon.DaemonContext(umask=0o022)
         dcxt.open()
-    meascli = MeasurementsClient(args.host, args.port, args.args, args.usrtxrx)
+    meascli = MeasurementsClient(args.host, args.port, args.args, args.usetxrx)
     meascli.run()
