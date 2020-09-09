@@ -7,14 +7,16 @@ import uhd
 import numpy as np
 
 class Radio:
+    ASYNC_WAIT = 0.5
     RX_CLEAR_COUNT = 1000
     LO_ADJ = 1e6
 
-    def __init__(self, usrp_args = "", chan = 0):
+    def __init__(self, logger, usrp_args = "", chan = 0):
         self.usrp = uhd.usrp.MultiUSRP(usrp_args)
         self.channel = chan
         self.rxstreamer = None
         self.txstreamer = None
+        self.logger = logger
         self._setup_streamers()
 
     def _setup_streamers(self):
@@ -102,9 +104,13 @@ class Radio:
         if rate:
             self.usrp.set_tx_rate(rate, self.channel)
 
-        # For collecting metadata from radio command (i.e., errors, etc.)
-        metadata = uhd.types.TXMetadata()
+        # Metadata for the TX command
+        meta = uhd.types.TXMetadata()
+        meta.has_time_spec = False
 
+        # Metadata from "async" status call
+        as_meta = uhd.types.TXAsyncMetadata()
+        
         # Figure out the size of the receive buffer and make it
         max_tx_samps = self.txstreamer.get_max_num_samps()
         tot_samps = samples.size
@@ -117,7 +123,8 @@ class Radio:
             tx_buffer[:, 0:0 + nsamps] = samples[:, tx_samps:tx_samps + nsamps]
             if nsamps < max_tx_samps:
                 tx_buffer[:, nsamps:] = 0. + 0.j
-            tx_samps += self.txstreamer.send(tx_buffer, metadata)
-
-            #if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
-            #    print(metadata.strerror())
+            tx_samps += self.txstreamer.send(tx_buffer, meta)
+            if self.txstreamer.recv_async_msg(as_meta, self.ASYNC_WAIT):
+                self.logger.debug("Async code: %s", as_meta.event_code)
+            else:
+                self.logger.debug("Timed out waiting for async.")

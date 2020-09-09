@@ -31,7 +31,7 @@ class MeasurementsClient:
         self.conproc = None
         self.logger = None
         self.setup_logger()
-        self.radio = Radio(radio_args)
+        self.radio = Radio(self.logger, radio_args)
         self.connector = ClientConnector(servaddr, servport)
 
     def setup_logger(self):
@@ -103,9 +103,9 @@ class MeasurementsClient:
             args['start_time'] = np.ceil(time.time())
         for i in range(1,steps):
             args['wfreq'] = i*args['freq_step']
-            args['end_time'] = args['start_time'] + (i+1)*args['time_step'] - \
+            args['end_time'] = args['start_time'] + i*args['time_step'] - \
                 self.TOFF
-            sltime = args['start_time'] + i*args['time_step'] - time.time()
+            sltime = args['start_time'] + (i-1)*args['time_step'] - time.time()
             if sltime > 0:
                 time.sleep(sltime)
             else:
