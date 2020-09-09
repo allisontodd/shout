@@ -107,6 +107,7 @@ class Radio:
         # Metadata for the TX command
         meta = uhd.types.TXMetadata()
         meta.has_time_spec = False
+        meta.start_of_burst = True
 
         # Metadata from "async" status call
         as_meta = uhd.types.TXAsyncMetadata()
@@ -123,6 +124,7 @@ class Radio:
             tx_buffer[:, 0:0 + nsamps] = samples[:, tx_samps:tx_samps + nsamps]
             if nsamps < max_tx_samps:
                 tx_buffer[:, nsamps:] = 0. + 0.j
+                meta.end_of_burst = True
             tx_samps += self.txstreamer.send(tx_buffer, meta)
         if self.txstreamer.recv_async_msg(as_meta, self.ASYNC_WAIT):
             self.logger.debug("Async code: %s", as_meta.event_code)
