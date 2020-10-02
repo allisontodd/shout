@@ -74,7 +74,7 @@ def search_entries(filters, results, obj):
                 if match:
                     break
             i += 1
-            if match && i == len(pelts):
+            if match and i == len(pelts):
                 results.append(obj)
     return None
         
