@@ -14,6 +14,16 @@ DEF_DFNAME="measurements.hdf5"
 MEAS_ROOT="measure_paths"
 DEF_FILTBW = 1e4
 
+# Wrapper class to identify regex pattern string.
+class RegexPattern(str):
+    pass
+
+# Simple class to represent timestamp ranges
+class TimestampRange:
+    def __init__(self, tmin, tmax):
+        self.min = int(tmin)
+        self.max = int(tmax)
+
 def get_powerdiffs(attrs, ds, filtbw):
     rate = attrs['rate']
     fstep = attrs['freq_step']
@@ -45,37 +55,58 @@ def do_plots(attrs, name, allsamps):
                             args=(title, freqs, psd))
         plproc.start()
 
+def search_entries(filters, results, obj):
+    pelts = obj.name.split('/')
+    if len(filters) == len(pelts):
+        i = 0
+        for filt in filters:
+            match = False
+            if type(filt) not in (list, tuple):
+                filt = [filt]
+            for fent in filt:
+                if type(fent) == RegexPattern:
+                    if re.match(fent, pelts[i]): match = True
+                elif type(fent) == TimestampRange:
+                    tstamp = int(pelts[i])
+                    if tstamp <= fent.max and tstamp >= fent.min: match = True
+                else:
+                    if fent == '*' or fent == pelts[i]: match = True
+                if match:
+                    break
+            i += 1
+            if match && i == len(pelts):
+                results.append(obj)
+    return None
+        
 def main(args):
+    tstamp = args.runstamp if args.runstamp else '*'
+    txname = args.txname if args.txname else '*'
+    rxname = args.rxname if args.rxname else '*'
     dsfile = h5py.File("%s/%s" % (args.datadir, args.dfname), "r")
+
     if args.listds:
         dsfile.visit(print)
 
     elif args.measdiff:
-        run = dsfile[MEAS_ROOT][args.runstamp]
-        if args.usesamps and run.attrs['get_samples']:
-            print("Computing avg power from samples.")
-            if args.txname:
-                txgrp = run[args.txname]
-                if args.rxname:
-                    rxds = txgrp[args.rxname]['samples']
-                    pwrs = get_powerdiffs(run.attrs, rxds, args.filtbw)
-                    print(pwrs)
-                else:
-                    for rxname, rxgrp in txgrp.items():
-                        pwrs = get_powerdiffs(run.attrs, rxgrp['samples'],
-                                              args.filtbw)
-                        print(pwrs)
-            else:
-                for txname, txgrp in run.items():
-                    for rxname, rxgrp in txgrp.items():
-                        pwrs = get_powerdiffs(run.attrs, rxgrp['samples'],
-                                              args.filtbw)
-                        print(pwrs)
+        measurements = dsfile[MEAS_ROOT]
+        filters = [tstamp, txname, rxname]
+        if args.usesamps:
+            print("Computing (average) power diff from samples.")
+            filters.append('samples')
+            results = []
+            run.visit(lambda obj: search_entries(filters, results, obj))
+            for dset in results:
+                path = dset.name.split('/')
+                run = measurements[path[1]]
+                pwrs = get_powerdiffs(run.attrs, dset, args.filtbw)
+                print(pwrs)
         else:
-            print("Printing stored average power values.")
-            for txname, txgrp in run.items():
-                for rxname, rxgrp in txgrp.items():
-                    print(rxgrp['avgpower'][1] - rxgrp['avgpower'][0])
+            print("Computing (average) power diff from pre-computed values.")
+            filters.append('avgpower')
+            results = []
+            run.visit(lambda obj: search_entries(filters, results, obj))
+            for dset in results:
+                print(dset[1] - dset[0])
 
     elif args.plotpsd:
         run = dsfile[MEAS_ROOT][args.runstamp]
