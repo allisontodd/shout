@@ -55,8 +55,8 @@ def do_plots(attrs, name, allsamps):
                             args=(title, freqs, psd))
         plproc.start()
 
-def search_entries(filters, results, obj):
-    pelts = obj.name.split('/')
+def search_entries(filters, results, name, obj):
+    pelts = name.split('/')
     if len(filters) == len(pelts):
         i = 0
         for filt in filters:
@@ -64,6 +64,7 @@ def search_entries(filters, results, obj):
             if type(filt) not in (list, tuple):
                 filt = [filt]
             for fent in filt:
+                match = False
                 if type(fent) == RegexPattern:
                     if re.match(fent, pelts[i]): match = True
                 elif type(fent) == TimestampRange:
@@ -74,7 +75,9 @@ def search_entries(filters, results, obj):
                 if match:
                     break
             i += 1
-            if match and i == len(pelts):
+            if not match:
+                return None
+            elif i == len(pelts):
                 results.append(obj)
     return None
         
@@ -95,7 +98,7 @@ def main(args):
             filters.append('samples')
             results = []
             meas.visititems(lambda name, obj:
-                            search_entries(filters, results, obj))
+                            search_entries(filters, results, name, obj))
             for dset in results:
                 path = dset.name.split('/')
                 run = meas[path[2]]
@@ -106,7 +109,7 @@ def main(args):
             filters.append('avgpower')
             results = []
             meas.visititems(lambda name, obj:
-                            search_entries(filters, results, obj))
+                            search_entries(filters, results, name, obj))
             for dset in results:
                 print(dset[1] - dset[0])
 
