@@ -94,17 +94,19 @@ def main(args):
             print("Computing (average) power diff from samples.")
             filters.append('samples')
             results = []
-            meas.visit(lambda obj: search_entries(filters, results, obj))
+            meas.visititems(lambda name, obj:
+                            search_entries(filters, results, obj))
             for dset in results:
                 path = dset.name.split('/')
-                run = meas[path[1]]
+                run = meas[path[2]]
                 pwrs = get_powerdiffs(run.attrs, dset, args.filtbw)
                 print(pwrs)
         else:
             print("Computing (average) power diff from pre-computed values.")
             filters.append('avgpower')
             results = []
-            meas.visit(lambda obj: search_entries(filters, results, obj))
+            meas.visititems(lambda name, obj:
+                            search_entries(filters, results, obj))
             for dset in results:
                 print(dset[1] - dset[0])
 
