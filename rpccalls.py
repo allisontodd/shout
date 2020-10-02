@@ -36,7 +36,10 @@ class RPCCall:
         cattrs = {kv.key: kv.val for kv in cmsg.attributes}
         for aname,adict in self.funcargs.items():
             if aname in cattrs:
-                argdict[aname] = adict['type'](cattrs[aname])
+                if adict['type'] == bool:
+                    argdict[aname] = True if cattrs[aname] == 'True' else False
+                else:
+                    argdict[aname] = adict['type'](cattrs[aname])
             else:
                 argdict[aname] = adict['default']
         return argdict
