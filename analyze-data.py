@@ -88,23 +88,23 @@ def main(args):
         dsfile.visit(print)
 
     elif args.measdiff:
-        measurements = dsfile[MEAS_ROOT]
+        meas = dsfile[MEAS_ROOT]
         filters = [tstamp, txname, rxname]
         if args.usesamps:
             print("Computing (average) power diff from samples.")
             filters.append('samples')
             results = []
-            run.visit(lambda obj: search_entries(filters, results, obj))
+            meas.visit(lambda obj: search_entries(filters, results, obj))
             for dset in results:
                 path = dset.name.split('/')
-                run = measurements[path[1]]
+                run = meas[path[1]]
                 pwrs = get_powerdiffs(run.attrs, dset, args.filtbw)
                 print(pwrs)
         else:
             print("Computing (average) power diff from pre-computed values.")
             filters.append('avgpower')
             results = []
-            run.visit(lambda obj: search_entries(filters, results, obj))
+            meas.visit(lambda obj: search_entries(filters, results, obj))
             for dset in results:
                 print(dset[1] - dset[0])
 
