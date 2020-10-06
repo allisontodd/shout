@@ -1,0 +1,16 @@
+[
+    {
+	"dsgroup": "foobar/kronk",
+	"entries": [
+	    {
+		"dsname": "zortz",
+		"attributes": {
+		    "foo": 5,
+		    "bar": 6,
+		    "baz": "nope",
+		    "quux": 88.9
+		}
+	    }
+	]
+    }
+]

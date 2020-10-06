@@ -72,8 +72,11 @@ def search_entries(filters, results, name, obj):
                 if type(fent) == RegexPattern:
                     if re.match(fent, pelts[i]): match = True
                 elif type(fent) == TimestampRange:
-                    tstamp = int(pelts[i])
-                    if tstamp <= fent.max and tstamp >= fent.min: match = True
+                    try:
+                        tstamp = int(pelts[i])
+                        if tstamp <= fent.max and tstamp >= fent.min: match = True
+                    except ValueError:
+                        pass
                 else:
                     if fent == '*' or fent == pelts[i]: match = True
                 if match:

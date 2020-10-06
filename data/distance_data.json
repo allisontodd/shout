@@ -1,0 +1,155 @@
+[
+    {
+	"dsgroup": "distances/bes",
+	"entries": [
+	    {
+		"attributes": {
+		    "browning": 564,
+		    "dentistry": 1331,
+		    "honors": 863,
+		    "hospital": 1318,
+		    "fm": 697,
+		    "meb": 829,
+		    "smt": 1451,
+		    "ustar": 931
+		}
+	    }
+	]
+    },    
+    {
+	"dsgroup": "distances/browning",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 564,
+		    "dentistry": 1707,
+		    "honors": 935,
+		    "hospital": 1034,
+		    "fm": 1023,
+		    "meb": 323,
+		    "smt": 1404,
+		    "ustar": 591
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/dentistry",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 1331,
+		    "browning": 1707,
+		    "honors": 922,
+		    "hospital": 1605,
+		    "fm": 1841,
+		    "meb": 1768,
+		    "smt": 1142,
+		    "ustar": 1573
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/honors",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 863,
+		    "browning": 935,
+		    "dentistry": 922,
+		    "hospital": 736,
+		    "fm": 1550,
+		    "meb": 896,
+		    "smt": 591,
+		    "ustar": 646
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/hospital",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 1318,
+		    "browning": 1034,
+		    "dentistry": 1605,
+		    "honors": 736,
+		    "fm": 1990,
+		    "meb": 781,
+		    "smt": 645,
+		    "ustar": 445
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/fm",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 697,
+		    "browning": 1023,
+		    "dentistry": 1841,
+		    "honors": 1550,
+		    "hospital": 1990,
+		    "meb": 1344,
+		    "smt": 2129,
+		    "ustar": 1552
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/meb",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 829,
+		    "browning": 323,
+		    "dentistry": 1768,
+		    "honors": 896,
+		    "hospital": 781,
+		    "fm": 1344,
+		    "smt": 1245,
+		    "ustar": 358
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/smt",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 1451,
+		    "browning": 1404,
+		    "dentistry": 1142,
+		    "honors": 591,
+		    "hospital": 645,
+		    "fm": 2129,
+		    "meb": 1245,
+		    "ustar": 904
+		}
+	    }
+	]
+    },
+    {
+	"dsgroup": "distances/ustar",
+	"entries": [
+	    {
+		"attributes": {
+		    "bes": 931,
+		    "browning": 591,
+		    "dentistry": 1573,
+		    "honors": 646,
+		    "hospital": 445,
+		    "fm": 1552,
+		    "meb": 358,
+		    "smt": 904
+		}
+	    }
+	]
+    }
+]
