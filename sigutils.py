@@ -14,7 +14,7 @@ def butter_filt(samps, flo, fhi, srate, order = 5):
     return sig.lfilter(b, a, samps)
 
 def get_avg_power(samps):
-    return np.sum(np.abs(samps))/len(samps)
+    return 10.0 * np.log10(np.sum(np.square(np.abs(samps)))/len(samps))
 
 def compute_psd(nfft, samples):
     """Return the power spectral density of `samples`"""

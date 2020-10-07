@@ -30,9 +30,9 @@ SITE_PATTERNS = {
     'honors': r'-honors-?',
     'hospital': r'-hospital-?',
     'fm': r'-fm-?',
-    'meb': r'-meb-',
-    'smt': r'-smt-',
-    'ustar': r'-ustar-'
+    'meb': r'-meb-?',
+    'smt': r'-smt-?',
+    'ustar': r'-ustar-?'
 }
 
 # Wrapper class to identify regex pattern string.
@@ -131,9 +131,12 @@ def plot_measdiffs(distdata, diffs):
     for d in diffs:
         txname = get_site(d[TXNAME])
         rxname = get_site(d[RXNAME])
-        means.append(10*np.log10(np.square(np.mean(d[DATA]))))
+        means.append(np.mean(d[DATA]))
         dists.append(distdata[txname].attrs[rxname])
-    plt.plot(dists, means, 'bo')
+    plt.plot(dists, means, 'rx')
+    m, b = np.polyfit(dists, means, 1)
+    plt.plot(dists, m*np.array(dists) + b, label = "slope: %f" % m)
+    plt.legend()
     plt.show()
 
 def main(args):
