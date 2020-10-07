@@ -60,7 +60,7 @@ def calc_powerdiffs_from_samples(attrs, ds, filtbw):
         ftsamps = butter_filt(tsamps, i*fstep - foff,
                               i*fstep + foff, rate)
         pwrs.append(get_avg_power(ftsamps) - get_avg_power(fbsamps))
-    return pwrs
+    return np.array(pwrs)
 
 def do_psd_plots(attrs, name, allsamps):
     rate = attrs['rate']
@@ -123,7 +123,6 @@ def calc_measdiffs(objs, args):
 
 def get_site(name):
     return list(filter(lambda a: re.search(a[1],name), SITE_PATTERNS.items()))[0][0]
-    
 
 def plot_measdiffs(distdata, diffs):
     means = []
@@ -131,14 +130,55 @@ def plot_measdiffs(distdata, diffs):
     for d in diffs:
         txname = get_site(d[TXNAME])
         rxname = get_site(d[RXNAME])
-        means.append(np.mean(d[DATA]))
-        dists.append(distdata[txname].attrs[rxname])
-    plt.plot(dists, means, 'rx')
+        x = distdata[txname].attrs[rxname]
+        y = np.mean(d[DATA])
+        plt.plot(x, y, 'rx')
+        plt.annotate("%s,%s" % (txname, rxname), (x,y))
+        dists.append(x)
+        means.append(y)
     m, b = np.polyfit(dists, means, 1)
     plt.plot(dists, m*np.array(dists) + b, label = "slope: %f" % m)
     plt.legend()
     plt.show()
 
+def plot_diffbars(distdata, diffs):
+    sites = {}
+    cnt = {}
+    w = 0.15
+    xstep = 1.8
+    colors = ['midnightblue','cornflowerblue','steelblue','royalblue','deepskyblue','cadetblue','darkturquoise','darkcyan','teal']
+    for d in diffs:
+        txname = get_site(d[TXNAME])
+        rxname = get_site(d[RXNAME])
+        if not txname in sites:
+            sites[txname] = {}
+            cnt[txname] = {}
+        if not rxname in sites[txname]:
+            sites[txname][rxname] = d[DATA]
+            cnt[txname][rxname] = 1
+        else:
+            sites[txname][rxname] += d[DATA]
+            cnt[txname][rxname] += 1
+    i = 0.0
+    lbls = []
+    fig, ax = plt.subplots()
+    for txname, rxset in sites.items():
+        for rxname,data in rxset.items():
+            lbls.append("%s\n%s" % (txname, rxname))
+            l = len(sites[txname][rxname])
+            avgs = sites[txname][rxname] / cnt[txname][rxname]
+            for k in range(l):
+                off = i + l*w/2 - (l-k)*w
+                v = avgs[k] if avgs[k] > 0 else 0
+                ax.bar(off, v, w, color=colors[k])
+            i += xstep
+    ax.set_xticks(np.arange(i, step=xstep))
+    ax.set_xticklabels(lbls)
+    fig.tight_layout()
+    plt.xticks(rotation=90)
+    plt.ylabel("Power difference (dB)")
+    plt.show()
+    
 def main(args):
     filters = []
     tsmin = -1
@@ -174,9 +214,15 @@ def main(args):
         dsfile.visititems(lambda name, obj:
                           search_entries(filters, results, name, obj))
         diffs = calc_measdiffs(results, args)
+        distgrp = dsfile[STATIC_ROOT]['distances']
         for d in diffs:
+            txname = get_site(d[TXNAME])
+            rxname = get_site(d[RXNAME])
+            print("Transmitter: %s, Receiver: %s, Distance: %d" %
+                  (txname, rxname, distgrp[txname].attrs[rxname]))
             print(d[DATA])
-        plot_measdiffs(dsfile[STATIC_ROOT]['distances'], diffs)
+        plot_measdiffs(distgrp, diffs)
+        plot_diffbars(distgrp, diffs)
 
     elif args.plotpsd:
         if not args.runstamp or not args.txname or not args.rxname:
