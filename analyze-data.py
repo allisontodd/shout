@@ -3,9 +3,11 @@
 import sys
 import argparse
 import multiprocessing as mp
+import re
 
 import numpy as np
 import scipy.signal as sig
+import matplotlib.pyplot as plt
 import h5py
 
 from sigutils import *
@@ -13,10 +15,25 @@ from sigutils import *
 DEF_DATADIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
 MEAS_ROOT="measure_paths"
+STATIC_ROOT="static_data"
 DEF_FILTBW = 1e4
 
 RATTRS = "_RUN_ATTRS"
 DATA = "_DATA"
+TXNAME = "_TXNAME"
+RXNAME = "_RXNAME"
+
+SITE_PATTERNS = {
+    'bes': r'-bes-?',
+    'browning': r'-browning-?',
+    'dentistry': r'-dentistry-?',
+    'honors': r'-honors-?',
+    'hospital': r'-hospital-?',
+    'fm': r'-fm-?',
+    'meb': r'-meb-',
+    'smt': r'-smt-',
+    'ustar': r'-ustar-'
+}
 
 # Wrapper class to identify regex pattern string.
 class RegexPattern(str):
@@ -94,6 +111,8 @@ def calc_measdiffs(objs, args):
         ent = {}
         run = obj.parent.parent
         ent[RATTRS] = run.attrs
+        ent[TXNAME] = obj.parent.name.split('/')[-1]
+        ent[RXNAME] = obj.name.split('/')[-1]
         if args.usesamps:
             ent[DATA] = calc_powerdiffs_from_samples(run.attrs, obj['samples'],
                                                      args.filtbw)
@@ -101,6 +120,21 @@ def calc_measdiffs(objs, args):
             ent[DATA] = obj['avgpower'][1] - obj['avgpower'][0]
         diffs.append(ent)
     return diffs
+
+def get_site(name):
+    return list(filter(lambda a: re.search(a[1],name), SITE_PATTERNS.items()))[0][0]
+    
+
+def plot_measdiffs(distdata, diffs):
+    means = []
+    dists = []
+    for d in diffs:
+        txname = get_site(d[TXNAME])
+        rxname = get_site(d[RXNAME])
+        means.append(10*np.log10(np.square(np.mean(d[DATA]))))
+        dists.append(distdata[txname].attrs[rxname])
+    plt.plot(dists, means, 'bo')
+    plt.show()
 
 def main(args):
     filters = []
@@ -139,6 +173,7 @@ def main(args):
         diffs = calc_measdiffs(results, args)
         for d in diffs:
             print(d[DATA])
+        plot_measdiffs(dsfile[STATIC_ROOT]['distances'], diffs)
 
     elif args.plotpsd:
         if not args.runstamp or not args.txname or not args.rxname:
