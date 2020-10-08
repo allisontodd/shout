@@ -127,17 +127,26 @@ def get_site(name):
     return list(filter(lambda a: re.search(a[1],name), SITE_PATTERNS.items()))[0][0]
 
 def plot_measdiffs(distdata, diffs):
+    sites = {}
     means = []
     dists = []
     for d in diffs:
         txname = get_site(d[TXNAME])
         rxname = get_site(d[RXNAME])
-        x = distdata[txname].attrs[rxname]
-        y = np.mean(d[DATA])
-        plt.plot(x, y, 'rx')
-        plt.annotate("%s,%s" % (txname, rxname), (x,y))
-        dists.append(x)
-        means.append(y)
+        if not txname in sites:
+            sites[txname] = {}
+        if not rxname in sites[txname]:
+            sites[txname][rxname] = []
+        sites[txname][rxname].append(d[DATA])
+    for txname,rxset in sites.items():
+        for rxname,data in rxset.items():
+            x = distdata[txname].attrs[rxname]
+            y = np.mean(sites[txname][rxname])
+            err = np.std(sites[txname][rxname])
+            plt.errorbar(x, y, yerr=err, fmt='rx')
+            plt.annotate("%s,%s" % (txname, rxname), (x,y))
+            dists.append(x)
+            means.append(y)
     m, b = np.polyfit(dists, means, 1)
     plt.plot(dists, m*np.array(dists) + b, label = "slope: %f" % m)
     plt.legend()
