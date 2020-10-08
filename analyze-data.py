@@ -23,6 +23,8 @@ DATA = "_DATA"
 TXNAME = "_TXNAME"
 RXNAME = "_RXNAME"
 
+SITE_NAMES = ['bes', 'browning', 'dentistry', 'honors', 'hospital', 'fm', 'meb', 'smt', 'ustar']
+
 SITE_PATTERNS = {
     'bes': r'-bes-?',
     'browning': r'-browning-?',
@@ -145,32 +147,29 @@ def plot_diffbars(distdata, diffs):
     sites = {}
     cnt = {}
     w = 0.15
-    xstep = 1.8
-    colors = ['midnightblue','cornflowerblue','steelblue','royalblue','deepskyblue','cadetblue','darkturquoise','darkcyan','teal']
+    colors = ['midnightblue','cornflowerblue','darkcyan','royalblue','deepskyblue','cadetblue','darkturquoise','steelblue','teal']
     for d in diffs:
         txname = get_site(d[TXNAME])
         rxname = get_site(d[RXNAME])
         if not txname in sites:
             sites[txname] = {}
-            cnt[txname] = {}
         if not rxname in sites[txname]:
-            sites[txname][rxname] = d[DATA]
-            cnt[txname][rxname] = 1
-        else:
-            sites[txname][rxname] += d[DATA]
-            cnt[txname][rxname] += 1
+            sites[txname][rxname] = []
+        sites[txname][rxname].append(d[DATA])
     i = 0.0
     lbls = []
     fig, ax = plt.subplots()
     for txname, rxset in sites.items():
         for rxname,data in rxset.items():
             lbls.append("%s\n%s" % (txname, rxname))
-            l = len(sites[txname][rxname])
-            avgs = sites[txname][rxname] / cnt[txname][rxname]
+            avgs = np.mean(sites[txname][rxname],0)
+            stds = np.std(sites[txname][rxname],0)
+            l = len(sites[txname][rxname][0])
+            xstep = w*(l + 3)
             for k in range(l):
-                off = i + l*w/2 - (l-k)*w
+                off = i + w*(k - l/2)
                 v = avgs[k] if avgs[k] > 0 else 0
-                ax.bar(off, v, w, color=colors[k])
+                ax.bar(off, v, w, color=colors[k], yerr=[[0],[stds[k]]])
             i += xstep
     ax.set_xticks(np.arange(i, step=xstep))
     ax.set_xticklabels(lbls)
