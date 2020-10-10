@@ -6,6 +6,7 @@ import socket
 import logging
 import selectors
 import random
+import select
 import multiprocessing as mp
 
 import measurements_pb2 as measpb
@@ -13,12 +14,17 @@ import measurements_pb2 as measpb
 DEF_IP = "127.0.0.1"
 DEF_PORT = 5555
 
+class InterfaceConnector:
+    MAX_CONN_TRIES = 1  # Each try waits CONN_SLEEP seconds before next.
+    CONN_SLEEP = 0
 
-class ClientConnector:
-    MAX_CONN_TRIES = 12 * 15  # Each try waits CONN_SLEEP seconds before next.
-    CONN_SLEEP = 5
+    CALL_QUIT = "quit"
+    CALL_STATUS = "status"
+
+    RES_READY = "ready"
+    RES_NOTREADY = "notready"
     
-    def __init__(self, srvaddr, srvport):
+    def __init__(self, srvaddr = DEF_IP, srvport = DEF_PORT):
         self.srvip = socket.gethostbyname(srvaddr)
         self.srvport = srvport
         self.name = socket.gethostname().split('.',1)[0]
@@ -26,13 +32,14 @@ class ClientConnector:
         self.pipe = None
         self.sock = None
         self.sid = 0
+        self.stopme = False
         self.sel = selectors.DefaultSelector()
 
     def __del__(self):
         if self.sock:
             msg = measpb.SessionMsg()
             msg.type = measpb.SessionMsg.CLOSE
-            msg.peertype = measpb.SessionMsg.MEAS_CLIENT
+            msg.peertype = measpb.SessionMsg.IFACE_CLIENT
             try:
                 self._send_msg(self.sock, msg)
                 self.sock.close()
@@ -44,7 +51,13 @@ class ClientConnector:
         ldata = conn.recv(4)
         if ldata:
             mlen = struct.unpack(">L", ldata)[0]
-            mbuf = conn.recv(mlen)
+            mbuf = bytearray()
+            while len(mbuf) < mlen:
+                rd, wt, xt = select.select([conn], [], [], 1)
+                if not rd:
+                    self.logger.warning("No data ready for read from socket.")
+                mbuf += conn.recv(mlen - len(mbuf))
+            self.logger.debug("Received %d, indicated size %d." % (len(mbuf), mlen))
             smsg = measpb.SessionMsg()
             smsg.ParseFromString(mbuf)
         return smsg
@@ -69,7 +82,7 @@ class ClientConnector:
                 self.logger.warning("Failed to connect to %s:%s: %s" %
                                     (self.srvip, self.srvport, e))
                 tries += 1
-                if tries > self.MAX_CONN_TRIES:
+                if tries >= self.MAX_CONN_TRIES:
                     self.logger.error("Too many connection attempts! Exiting.")
                     raise Exception("Too many connection attempts! Exiting.")
                 time.sleep(self.CONN_SLEEP)
@@ -108,15 +121,17 @@ class ClientConnector:
         if func in self.CALLS:
             # Handle calls meant for the connector (this class).
             self._send_msg(conn, self.CALLS[func](self, msg))
+        elif msg.peertype == measpb.SessionMsg.IFACE_CLIENT:
+            # Send calls from actual iface client to orchestrator
+            msg.sid = self.sid
+            self._send_msg(self.sock, msg)
         else:
-            # Send along calls destined for the client measurement code
+            # Pass along calls to measurement interface (not used yet).
             self._send_msg(self.pipe, msg)
 
     def handle_result(self, msg, conn):
-        # Pass result back to server.
-        msg.sid = self.sid
-        self._add_attr(msg, "clientname", self.name)
-        self._send_msg(self.sock, msg)
+        # Pass result up to interface client code.
+        self._send_msg(self.pipe, msg)
 
     def handle_hb(self, msg, conn):
         pass
@@ -128,7 +143,7 @@ class ClientConnector:
         self._connect()
         msg = measpb.SessionMsg()
         msg.type = measpb.SessionMsg.INIT
-        msg.peertype = measpb.SessionMsg.MEAS_CLIENT
+        msg.peertype = measpb.SessionMsg.IFACE_CLIENT
         msg.sid = self.sid
         self._add_attr(msg, "clientname", self.name)
         self._send_msg(self.sock, msg)
@@ -137,15 +152,45 @@ class ClientConnector:
         self.pipe = pipe
         self.sel.register(self.pipe, selectors.EVENT_READ, self._readpipe)
         self.logger = logger
-        self.send_init()
+        try:
+            self.send_init()
+        except:
+            self.logger.error("Failed to connect to orchestrator!")
+            self.pipe.close()
+            exit(1)
 
         while True:
             events = self.sel.select()
             for key, mask in events:
                 callback = key.data
                 callback(key.fileobj, mask)
+            if self.stopme:
+                self.logger.info("Interface connector process exiting.")
+                cmsg = measpb.SessionMsg()
+                cmsg.sid = self.sid
+                cmsg.type = measpb.SessionMsg.CLOSE
+                cmsg.peertype = measpb.SessionMsg.IFACE_CLIENT
+                self._send_msg(self.sock, cmsg)
+                exit(0)
 
-    CALLS = {}
+    def status_call(self, msg):
+        rmsg = measpb.SessionMsg()
+        rmsg.type = measpb.SessionMsg.RESULT
+        rmsg.sid = self.sid
+        if self.sid != 0:
+            self._add_attr(rmsg, "result", self.RES_READY)
+        else:
+            self._add_attr(rmsg, "result", self.RES_NOTREADY)
+        return rmsg
+
+    def stop_connector_call(self, msg):
+        self.stopme = True
+        return msg
+                
+    CALLS = {
+        CALL_QUIT: stop_connector_call,
+        CALL_STATUS: status_call,
+    }
                 
     DISPATCH = {
         measpb.SessionMsg.INIT: handle_init,

@@ -30,11 +30,11 @@ class MeasurementsClient:
         self.pipe = None
         self.conproc = None
         self.logger = None
-        self.setup_logger()
+        self._setup_logger()
         self.radio = Radio(self.logger, device_args, rx_txrx)
         self.connector = ClientConnector(servaddr, servport)
 
-    def setup_logger(self):
+    def _setup_logger(self):
         fmat = logging.Formatter(fmt='%(asctime)s:%(levelname)s: %(message)s',
                                  datefmt='%Y-%m-%d %H:%M:%S')
         shandler = logging.StreamHandler()
@@ -127,6 +127,8 @@ class MeasurementsClient:
                 args = RPCCALLS[func].decode(msg)
                 rmsg = measpb.SessionMsg()
                 rmsg.type = measpb.SessionMsg.RESULT
+                msg.peertype = measpb.SessionMsg.MEAS_CLIENT
+                rmsg.uuid = msg.uuid
                 add_attr(rmsg, "funcname", func)
                 if func.startswith('seq'):
                     self._do_seq(args, rmsg, self.CALLS[func])

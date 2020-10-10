@@ -10,7 +10,7 @@ message SessionMsg {
     // Session ID (assigned by controller).
     int32 sid  = 1;
 
-    // Unique ID for this message.
+    // Unique ID for function calls and messages.
     int32 uuid = 2;
 
     // Enum of message types.
@@ -24,21 +24,29 @@ message SessionMsg {
     // One of the above types.
     MsgType type = 3;
 
+    enum PeerType {
+	MEAS_CLIENT = 0;  // Client that performs radio actions on demand.
+	IFACE_CLIENT = 1; // User-facing interface client.
+	ORCH = 2;   // The orchestrator.
+    }
+    // One of the above types
+    MsgType peertype = 4;
+    
     // Start time for command
-    double start_time = 4;
+    double start_time = 5;
 
     // List of clients to receive a message (used controller-side).
-    repeated string clients = 5;
+    repeated string clients = 6;
     
     // Efficient storage of complex samples.
     message Complex {
 	double r = 1;
 	double j = 2;
     }
-    repeated Complex samples = 6;
+    repeated Complex samples = 7;
 
     // For non-complex-valued measurements.
-    repeated float measurements = 7;
+    repeated float measurements = 8;
 
     // keyval pair for general message attributes
     message KeyVal {
@@ -46,5 +54,5 @@ message SessionMsg {
 	string val = 2;
     }
     // KV attributes for this session message
-    repeated KeyVal attributes = 8;
+    repeated KeyVal attributes = 9;
 }

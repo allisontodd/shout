@@ -6,20 +6,24 @@ import argparse
 import logging
 import json
 import multiprocessing as mp
+import random
+
 import numpy as np
 import h5py
 
 import measurements_pb2 as measpb
-from serverconnector import ServerConnector
+from ifaceconnector import InterfaceConnector
 from rpccalls import *
 from sigutils import *
 
+DEF_IP = "127.0.0.1"
+DEF_PORT = 5555
 DEF_OUTDIR="./mcondata"
 DEF_DFNAME="measurements.hdf5"
-DEF_LOGFILE="/var/tmp/mcontroller.log"
-LOGLEVEL = logging.DEBUG
+DEF_LOGFILE="/var/tmp/measiface.log"
+DEF_LOGLEVEL = logging.DEBUG
 
-class MeasurementsController:
+class MeasurementsInterface:
     POLLTIME = 10
     DEF_TOFF = 2
     TX_TOFF = 0.5
@@ -37,19 +41,44 @@ class MeasurementsController:
         self.dfname = args.dfname
         self._setup_logger(args.logfile)
         self._setup_datadir(args.datadir)
-        self.connector = ServerConnector()
+        self.connector = InterfaceConnector(args.host, args.port)
 
-    def _setup_logger(self, logfile):
+    def _setup_logger(self, logfile = DEF_LOGFILE):
         fmat = logging.Formatter(fmt=self.LOGFMAT, datefmt=self.LOGDATEFMAT)
         shandler = logging.StreamHandler()
         shandler.setFormatter(fmat)
         fhandler = logging.FileHandler(logfile)
         fhandler.setFormatter(fmat)
         self.logger = mp.get_logger()
-        self.logger.setLevel(LOGLEVEL)
+        self.logger.setLevel(DEF_LOGLEVEL)
         self.logger.addHandler(shandler)
         self.logger.addHandler(fhandler)
 
+    def _start_netproc(self):
+        (c1, c2) = mp.Pipe()
+        self.pipe = c1
+        self.netproc = mp.Process(target=self.connector.run,
+                                  args=(c2, self.logger))
+        self.netproc.start()
+        cmsg = measpb.SessionMsg()
+        cmsg.type = measpb.SessionMsg.CALL
+        add_attr(cmsg, "funcname", InterfaceConnector.CALL_STATUS)
+        while True:
+            self.pipe.send(cmsg.SerializeToString())
+            rmsg = measpb.SessionMsg()
+            rmsg.ParseFromString(self.pipe.recv())
+            res = get_attr(rmsg, "result")
+            if res == InterfaceConnector.RES_READY:
+                break
+            time.sleep(1)
+
+    def _stop_netproc(self):
+        cmsg = measpb.SessionMsg()
+        cmsg.type = measpb.SessionMsg.CALL
+        add_attr(cmsg, "funcname", InterfaceConnector.CALL_QUIT)
+        self.pipe.send(cmsg.SerializeToString())
+        self.netproc.join()
+        
     def _setup_datadir(self, ddir):
         self.datadir = ddir
         if not os.path.exists(ddir):
@@ -62,10 +91,12 @@ class MeasurementsController:
         self.start_time = 0
 
     def _get_connected_clients(self):
-        # Get list of clients from ServerConnector
+        # Get list of clients from the Orchestrator
         cmsg = measpb.SessionMsg()
         cmsg.type = measpb.SessionMsg.CALL
-        add_attr(cmsg, "funcname", ServerConnector.CALL_GETCLIENTS)
+        cmsg.peertype = measpb.SessionMsg.IFACE_CLIENT
+        cmsg.uuid = random.getrandbits(31)
+        add_attr(cmsg, "funcname", "getclients")
         self.pipe.send(cmsg.SerializeToString())
         rmsg = measpb.SessionMsg()
         rmsg.ParseFromString(self.pipe.recv())
@@ -83,6 +114,8 @@ class MeasurementsController:
         self.logger.info("Running %s on: %s" % (cmd['cmd'], cmd['client_list']))
         cmsg = RPCCALLS[cmd['cmd']].encode(**cmd)
         cmsg.clients.extend(cmd['client_list'])
+        cmsg.peertype = measpb.SessionMsg.IFACE_CLIENT
+        cmsg.uuid = random.getrandbits(31)
         self.pipe.send(cmsg.SerializeToString())
 
     def _get_datafile(self):
@@ -148,8 +181,10 @@ class MeasurementsController:
         measgrp.attrs.update(cmd)
         cmd['gain'] = cmd['txgain']
         txcmd = RPCCALLS['seq_transmit'].encode(**cmd)
+        txcmd.peertype = measpb.SessionMsg.IFACE_CLIENT
         cmd['gain'] = cmd['rxgain']
         rxcmd = RPCCALLS['seq_measure'].encode(**cmd)
+        rxcmd.peertype = measpb.SessionMsg.IFACE_CLIENT
         del cmd['gain']
         del cmd['cmd']
 
@@ -162,6 +197,7 @@ class MeasurementsController:
             txcmd.clients.append(txclient)
             rxcmd.ClearField("clients")
             rxcmd.clients.extend(rxclients)
+            rxcmd.uuid = random.getrandbits(31)
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': rxclients,
                               'timeout': cmd['timeout']})
@@ -181,6 +217,8 @@ class MeasurementsController:
                     ds[0] = arr
             rxcmd.start_time = np.ceil(time.time()) + toff
             txcmd.start_time = rxcmd.start_time - self.TX_TOFF
+            rxcmd.uuid = random.getrandbits(31)
+            txcmd.uuid = random.getrandbits(31)
             self.pipe.send(txcmd.SerializeToString())
             self.pipe.send(rxcmd.SerializeToString())
             self.cmd_waitres({'client_list': rxclients + [txclient],
@@ -196,11 +234,7 @@ class MeasurementsController:
                     ds = txgrp[rxclient]['avgpower'][1] = arr
 
     def run(self, cmdfile):
-        (c1, c2) = mp.Pipe()
-        self.pipe = c1
-        self.netproc = mp.Process(target=self.connector.run,
-                                  args=(c2, self.logger))
-        self.netproc.start()
+        self._start_netproc()
 
         # Read in and execute commands
         with open(cmdfile) as cfile:
@@ -221,7 +255,7 @@ class MeasurementsController:
                     self._rpc_call(cmd)
 
         self.logger.info("Done with commands...")
-        self.netproc.join()
+        self._stop_netproc()
 
     CMD_DISPATCH = {
         "pause":         cmd_pause,
@@ -239,9 +273,11 @@ def parse_args():
     parser.add_argument("-l", "--logfile", type=str, default=DEF_LOGFILE)
     parser.add_argument("-o", "--datadir", type=str, default=DEF_OUTDIR)
     parser.add_argument("-f", "--dfname", type=str, default=DEF_DFNAME)
+    parser.add_argument("-s", "--host", help="Orchestrator host", default=DEF_IP, type=str)
+    parser.add_argument("-p", "--port", help="Orchestrator port", default=DEF_PORT, type=int)
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    meas = MeasurementsController(args)
+    meas = MeasurementsInterface(args)
     meas.run(args.cmdfile)
